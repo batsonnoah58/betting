@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthGuard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Smartphone, DollarSign } from 'lucide-react';
-import { toast } from '../../hooks/use-toast';
+import { Smartphone, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DepositModalProps {
@@ -16,78 +15,85 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const { updateWallet, user } = useAuth();
+  const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const { user, refreshUser } = useAuth();
 
   const handleDeposit = async () => {
     const depositAmount = parseFloat(amount);
     
     if (isNaN(depositAmount) || depositAmount <= 0) {
-      toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid amount greater than 0",
-        variant: "destructive",
-      });
+      setErrorMessage("Please enter a valid amount greater than 0");
+      setStatus('error');
       return;
     }
 
-    if (depositAmount < 10) {
-      toast({
-        title: "Minimum Deposit",
-        description: "Minimum deposit amount is KES 10",
-        variant: "destructive",
-      });
+    if (depositAmount < 100) {
+      setErrorMessage("Minimum deposit amount is KES 100");
+      setStatus('error');
       return;
     }
 
     if (depositAmount > 100000) {
-      toast({
-        title: "Maximum Deposit",
-        description: "Maximum deposit amount is KES 100,000",
-        variant: "destructive",
-      });
+      setErrorMessage("Maximum deposit amount is KES 100,000");
+      setStatus('error');
       return;
     }
 
     // Validate phone number format (Kenyan format)
     const phoneRegex = /^254[17]\d{8}$/;
     if (!phoneRegex.test(phoneNumber)) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid Kenyan phone number (e.g., 254700000000)",
-        variant: "destructive",
-      });
+      setErrorMessage("Please enter a valid Kenyan phone number (e.g., 254700000000)");
+      setStatus('error');
       return;
     }
 
     setIsProcessing(true);
+    setStatus('processing');
+    setErrorMessage('');
 
     try {
-      // For demo purposes, directly update wallet balance
-      // In production, this would integrate with a payment gateway
-      await updateWallet(depositAmount);
+      // Get user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("User not authenticated");
+      }
 
-      // Add transaction record
-      await supabase.from('transactions').insert({
-        user_id: user?.id,
-        type: 'deposit',
-        amount: depositAmount,
-        description: `Wallet deposit via M-Pesa (${phoneNumber})`
+      // Call M-Pesa deposit function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-deposit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          amount: depositAmount,
+          phoneNumber,
+          userId: user?.id
+        }),
       });
 
-      toast({
-        title: "Deposit Successful",
-        description: `KSH ${depositAmount} has been added to your wallet`,
-        variant: "default",
-      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to initiate deposit');
+      }
+
+      setStatus('success');
+      toast.success("STK Push sent to your phone. Please check your M-Pesa and enter the PIN to complete the deposit.");
       
-      onClose();
+      // Close modal after a delay to show success message
+      setTimeout(() => {
+        onClose();
+        refreshUser(); // Refresh user data
+      }, 3000);
+
     } catch (error) {
       console.error('Deposit error:', error);
-      toast({
-        title: "Deposit Failed",
-        description: error instanceof Error ? error.message : "Failed to process deposit",
-        variant: "destructive",
-      });
+      setErrorMessage(error instanceof Error ? error.message : "Failed to process deposit");
+      setStatus('error');
+      toast.error(error instanceof Error ? error.message : "Failed to process deposit");
     } finally {
       setIsProcessing(false);
     }
@@ -96,77 +102,133 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const formatCurrency = (value: string) => {
     const num = parseFloat(value);
     if (isNaN(num)) return '';
-    return `KSH ${num.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
+    return `KES ${num.toLocaleString('en-KE', { minimumFractionDigits: 2 })}`;
+  };
+
+  const resetForm = () => {
+    setAmount('');
+    setPhoneNumber('');
+    setStatus('idle');
+    setErrorMessage('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={handleClose}>
       <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Deposit Funds</DialogTitle>
+          <DialogTitle className="flex items-center space-x-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <span>Deposit Funds</span>
+          </DialogTitle>
           <DialogDescription>
-            Add money to your wallet to start betting. Minimum deposit is KES 100.
+            Add money to your wallet using M-Pesa. Minimum deposit is KES 100.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="amount" className="text-sm font-medium">
-              Amount (KES)
-            </label>
-            <Input
-              id="amount"
-              type="number"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="100"
-              className="h-10"
-            />
-            <p className="text-xs text-muted-foreground">
-              Minimum: KES 100 | Maximum: KES 100,000
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="phone" className="text-sm font-medium">
-              M-Pesa Phone Number
-            </label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="254700000000"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="h-10"
-            />
-            <p className="text-xs text-muted-foreground">
-              Enter your M-Pesa registered phone number
-            </p>
-          </div>
-
-          {/* error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-              <p className="text-sm text-destructive">{error}</p>
+          {status === 'success' ? (
+            <div className="text-center py-6">
+              <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">STK Push Sent!</h3>
+              <p className="text-sm text-muted-foreground">
+                Please check your phone and enter your M-Pesa PIN to complete the deposit.
+              </p>
             </div>
-          ) */}
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label htmlFor="amount" className="text-sm font-medium">
+                  Amount (KES)
+                </label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="Enter amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="100"
+                  max="100000"
+                  className="h-10"
+                  disabled={isProcessing}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum: KES 100 | Maximum: KES 100,000
+                </p>
+              </div>
 
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-            <Button 
-              variant="outline" 
-              onClick={onClose}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleDeposit}
-              disabled={!amount || !phoneNumber || parseFloat(amount) < 10 || isProcessing}
-              className="flex-1"
-            >
-              {isProcessing ? 'Processing...' : `Deposit ${amount ? formatCurrency(amount) : ''}`}
-            </Button>
-          </div>
+              <div className="space-y-2">
+                <label htmlFor="phone" className="text-sm font-medium">
+                  M-Pesa Phone Number
+                </label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="254700000000"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="h-10"
+                  disabled={isProcessing}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter your M-Pesa registered phone number
+                </p>
+              </div>
+
+              {status === 'error' && errorMessage && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <p className="text-sm text-destructive">{errorMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleClose}
+                  className="flex-1"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleDeposit}
+                  disabled={!amount || !phoneNumber || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
+                  className="flex-1"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    `Deposit ${amount ? formatCurrency(amount) : ''}`
+                  )}
+                </Button>
+              </div>
+
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <div className="text-xs text-muted-foreground">
+                    <div className="font-medium mb-1">How it works:</div>
+                    <ul className="space-y-1 list-disc list-inside">
+                      <li>Enter amount and phone number</li>
+                      <li>Click "Deposit" to receive STK Push</li>
+                      <li>Enter your M-Pesa PIN when prompted</li>
+                      <li>Funds will be added to your wallet instantly</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
