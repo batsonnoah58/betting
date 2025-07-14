@@ -29,23 +29,15 @@ interface Game {
   league_id: number;
   kick_off_time: string;
   status: string;
-}
-interface Market {
-  id: number;
-  name: string;
-  type: string;
-}
-interface MarketOption {
-  id: number;
-  label: string;
+  home_team?: { name: string; logo: string };
+  away_team?: { name: string; logo: string };
+  league?: { name: string };
 }
 
 const BetHistory: React.FC = () => {
   const { user } = useAuth();
   const [bets, setBets] = useState<Bet[]>([]);
   const [games, setGames] = useState<Record<number, Game>>({});
-  const [markets, setMarkets] = useState<Record<number, Market>>({});
-  const [options, setOptions] = useState<Record<number, MarketOption>>({});
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'settled'>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'recent' | 'stake' | 'winnings'>('recent');
@@ -60,21 +52,19 @@ const BetHistory: React.FC = () => {
         .order('placed_at', { ascending: false });
       if (error) return;
       setBets(betsData || []);
-      // Fetch related games, markets, options
+      // Fetch related games only
       const gameIds = Array.from(new Set((betsData || []).map((b) => b.game_id)));
-      const marketIds = Array.from(new Set((betsData || []).map((b) => b.market_id).filter(Boolean)));
-      const optionIds = Array.from(new Set((betsData || []).map((b) => b.market_option_id).filter(Boolean)));
       if (gameIds.length) {
-        const { data: gamesData } = await supabase.from('games').select('*').in('id', gameIds);
+        const { data: gamesData } = await supabase
+          .from('games')
+          .select(`
+            id, home_team_id, away_team_id, league_id, kick_off_time, status,
+            home_team:teams!games_home_team_id_fkey(id, name, logo),
+            away_team:teams!games_away_team_id_fkey(id, name, logo),
+            league:leagues(name)
+          `)
+          .in('id', gameIds);
         setGames(Object.fromEntries((gamesData || []).map((g) => [g.id, g])));
-      }
-      if (marketIds.length) {
-        const { data: marketsData } = await supabase.from('markets').select('*').in('id', marketIds);
-        setMarkets(Object.fromEntries((marketsData || []).map((m) => [m.id, m])));
-      }
-      if (optionIds.length) {
-        const { data: optionsData } = await supabase.from('market_options').select('*').in('id', optionIds);
-        setOptions(Object.fromEntries((optionsData || []).map((o) => [o.id, o])));
       }
     };
     fetchBets();
@@ -90,12 +80,10 @@ const BetHistory: React.FC = () => {
   if (search) {
     filtered = filtered.filter((b) => {
       const game = games[b.game_id];
-      const market = b.market_id ? markets[b.market_id] : undefined;
-      const option = b.market_option_id ? options[b.market_option_id] : undefined;
       return (
         (game?.id?.toString().includes(search) || '') ||
-        (market?.name?.toLowerCase().includes(search.toLowerCase()) || '') ||
-        (option?.label?.toLowerCase().includes(search.toLowerCase()) || '')
+        (game?.home_team?.name?.toLowerCase().includes(search.toLowerCase()) || '') ||
+        (game?.away_team?.name?.toLowerCase().includes(search.toLowerCase()) || '')
       );
     });
   }
@@ -147,8 +135,7 @@ const BetHistory: React.FC = () => {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Game</TableHead>
-                <TableHead>Market</TableHead>
-                <TableHead>Option</TableHead>
+                <TableHead>Bet Type</TableHead>
                 <TableHead>Stake</TableHead>
                 <TableHead>Odds</TableHead>
                 <TableHead>Potential</TableHead>
@@ -158,7 +145,7 @@ const BetHistory: React.FC = () => {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Ghost className="h-8 w-8 text-muted-foreground mb-2" />
                       <div className="font-semibold">No betting history found</div>
@@ -172,19 +159,37 @@ const BetHistory: React.FC = () => {
               ) : (
                 filtered.map((bet) => {
                   const game = games[bet.game_id];
-                  const market = bet.market_id ? markets[bet.market_id] : undefined;
-                  const option = bet.market_option_id ? options[bet.market_option_id] : undefined;
                   return (
                     <TableRow key={bet.id}>
                       <TableCell>{new Date(bet.placed_at).toLocaleString()}</TableCell>
-                      <TableCell>{game ? `${game.home_team_id} vs ${game.away_team_id}` : bet.game_id}</TableCell>
-                      <TableCell>{market ? `${market.name} (${market.type})` : bet.bet_on}</TableCell>
-                      <TableCell>{option ? option.label : '-'}</TableCell>
-                      <TableCell>{bet.stake}</TableCell>
-                      <TableCell>{bet.odds}</TableCell>
-                      <TableCell>{bet.potential_winnings}</TableCell>
                       <TableCell>
-                        <Badge variant={bet.status === 'active' ? 'default' : 'secondary'}>{bet.status}</Badge>
+                        {game ? (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium">{game.home_team?.name || `Team ${game.home_team_id}`}</span>
+                            <span className="text-muted-foreground">vs</span>
+                            <span className="text-sm font-medium">{game.away_team?.name || `Team ${game.away_team_id}`}</span>
+                            {game.league && (
+                              <Badge variant="outline" className="text-xs">
+                                {game.league.name}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          `Game ${bet.game_id}`
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {bet.bet_on.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>KES {bet.stake}</TableCell>
+                      <TableCell>{bet.odds}</TableCell>
+                      <TableCell>KES {bet.potential_winnings}</TableCell>
+                      <TableCell>
+                        <Badge variant={bet.status === 'active' ? 'default' : bet.status === 'won' ? 'secondary' : 'destructive'}>
+                          {bet.status}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   );

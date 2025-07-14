@@ -33,12 +33,15 @@ export const GamesList: React.FC = () => {
   const [leagues, setLeagues] = useState<string[]>(['all']);
   const [selectedLeague, setSelectedLeague] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGamesAndLeagues();
   }, []);
 
   const fetchGamesAndLeagues = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       // Fetch games with team and league information
       const { data: gamesData, error: gamesError } = await supabase
@@ -60,6 +63,7 @@ export const GamesList: React.FC = () => {
 
       if (gamesError) {
         console.error('Error fetching games:', gamesError);
+        setError('Failed to load games. Please try again.');
         return;
       }
 
@@ -92,9 +96,9 @@ export const GamesList: React.FC = () => {
       // Get unique leagues
       const uniqueLeagues = Array.from(new Set(transformedGames.map(game => game.league)));
       setLeagues(['all', ...uniqueLeagues]);
-
-    } catch (error) {
-      console.error('Error fetching data:', error);
+    } catch (err) {
+      console.error('Error fetching games:', err);
+      setError('Failed to load games. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -112,19 +116,6 @@ export const GamesList: React.FC = () => {
     };
     return variants[confidence as keyof typeof variants] || variants.medium;
   };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <Card className="shadow-betting">
-          <CardContent className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading games...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -159,15 +150,37 @@ export const GamesList: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4">
-        {filteredGames.map((game, index) => (
-          <div key={game.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-            <GameCard game={game} />
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading games...</span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : error ? (
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="text-center py-8">
+              <div className="text-destructive mb-2">{error}</div>
+              <Button onClick={fetchGamesAndLeagues} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {filteredGames.map((game, index) => (
+            <div key={game.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+              <GameCard game={game} />
+            </div>
+          ))}
+        </div>
+      )}
 
-      {filteredGames.length === 0 && (
+      {!isLoading && !error && filteredGames.length === 0 && (
         <Card className="shadow-card">
           <CardContent className="text-center py-12">
             <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

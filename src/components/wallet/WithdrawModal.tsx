@@ -94,9 +94,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'KES',
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -123,20 +123,20 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Withdrawal Amount ($)</Label>
+              <Label htmlFor="amount">Withdrawal Amount (KES)</Label>
               <Input
                 id="amount"
                 type="number"
-                placeholder="20"
+                placeholder="2000"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                min="20"
+                min="2000"
                 max={user?.walletBalance || 0}
                 step="0.01"
                 required
               />
               <div className="text-xs text-muted-foreground">
-                Minimum withdrawal: $20
+                Minimum withdrawal: KES 2,000
               </div>
             </div>
 
@@ -166,10 +166,9 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
               <div className="text-sm">
                 <div className="font-medium text-warning-foreground">Important</div>
                 <div className="text-muted-foreground mt-1">
-                  • Minimum withdrawal: $20<br/>
-                  • Withdrawal fee: $2<br/>
+                  • Minimum withdrawal: KES 2,000<br/>
                   • Processing time: 1-3 business days<br/>
-                  • Funds will be sent to your PayPal account
+                  • Funds will be sent to your M-Pesa account
                 </div>
               </div>
             </div>

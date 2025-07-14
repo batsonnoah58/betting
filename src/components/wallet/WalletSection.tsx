@@ -14,9 +14,9 @@ export const WalletSection: React.FC = () => {
   const [todayStats, setTodayStats] = useState({ wins: 0, losses: 0 });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'KES',
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -53,7 +53,7 @@ export const WalletSection: React.FC = () => {
     }
   };
 
-  const canWithdraw = user && user.walletBalance >= 20;
+  const canWithdraw = user && user.walletBalance >= 2000;
 
   return (
     <>
@@ -117,7 +117,7 @@ export const WalletSection: React.FC = () => {
           {!canWithdraw && user && user.walletBalance > 0 && (
             <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
               <div className="text-sm text-warning-foreground text-center">
-                Minimum withdrawal amount is $20
+                Minimum withdrawal amount is KES 2,000
               </div>
             </div>
           )}

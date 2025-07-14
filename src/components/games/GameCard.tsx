@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 
 interface Game {
   id: number;
@@ -49,6 +50,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [marketOptions, setMarketOptions] = useState<MarketOption[]>([]);
   const [marketStakes, setMarketStakes] = useState<Record<number, string>>({});
   const [bettingOnOption, setBettingOnOption] = useState<number | null>(null);
+  const [showBetConfirmation, setShowBetConfirmation] = useState(false);
+  const [pendingBet, setPendingBet] = useState<{ type: 'home' | 'draw' | 'away' | 'option'; stake: number; odds: number; option?: MarketOption } | null>(null);
 
   // Filtering, sorting, grouping state
   const [marketTypeFilter, setMarketTypeFilter] = useState<string>('all');
@@ -121,22 +124,39 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       return;
     }
 
-    setBettingOn(betType);
+    const odds = game.odds[betType];
+    const potentialWinnings = stake * odds;
 
+    // Show confirmation dialog
+    setPendingBet({
+      type: betType,
+      stake,
+      odds
+    });
+    setShowBetConfirmation(true);
+  };
+
+  const confirmBet = async () => {
+    if (!pendingBet) return;
+
+    if (pendingBet.type === 'option') {
+      confirmMarketOptionBet();
+      return;
+    }
+
+    setBettingOn(pendingBet.type);
     try {
-      // Get odds for the selected outcome
-      const odds = game.odds[betType];
-      const potentialWinnings = stake * odds;
-
+      const potentialWinnings = pendingBet.stake * pendingBet.odds;
+      
       // Place bet in database
       const { error } = await supabase
         .from('bets')
         .insert({
-          user_id: user.id,
+          user_id: user!.id,
           game_id: game.id,
-          stake,
-          bet_on: betType === 'home' ? 'home_win' : betType === 'draw' ? 'draw' : 'away_win',
-          odds,
+          stake: pendingBet.stake,
+          bet_on: pendingBet.type === 'home' ? 'home_win' : pendingBet.type === 'draw' ? 'draw' : 'away_win',
+          odds: pendingBet.odds,
           potential_winnings: potentialWinnings
         });
 
@@ -145,10 +165,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       }
 
       // Update wallet balance (deduct stake)
-      await updateWallet(-stake);
+      await updateWallet(-pendingBet.stake);
 
       // Reset stake and show success
-      setStakes(prev => ({ ...prev, [betType]: '' }));
+      setStakes(prev => ({ ...prev, [pendingBet.type]: '' }));
       toast.success(`Bet placed! Potential winnings: KES ${potentialWinnings.toFixed(2)}`);
 
     } catch (error) {
@@ -156,6 +176,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       toast.error('Failed to place bet. Please try again.');
     } finally {
       setBettingOn(null);
+      setShowBetConfirmation(false);
+      setPendingBet(null);
     }
   };
 
@@ -178,31 +200,47 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       toast.error("Minimum stake amount is KES 10");
       return;
     }
-    setBettingOnOption(option.id);
+
+    // Show confirmation dialog
+    setPendingBet({
+      type: 'option',
+      stake,
+      odds: option.odds,
+      option
+    });
+    setShowBetConfirmation(true);
+  };
+
+  const confirmMarketOptionBet = async () => {
+    if (!pendingBet || !pendingBet.option) return;
+
+    setBettingOnOption(pendingBet.option.id);
     try {
-      const potentialWinnings = stake * option.odds;
+      const potentialWinnings = pendingBet.stake * pendingBet.option.odds;
       // Place bet in database (store market_option_id and market_id for reference)
       const { error } = await supabase
         .from('bets')
         .insert({
-          user_id: user.id,
+          user_id: user!.id,
           game_id: game.id,
-          stake,
+          stake: pendingBet.stake,
           bet_on: 'pending', // Use 'pending' for flexible markets
-          odds: option.odds,
+          odds: pendingBet.option.odds,
           potential_winnings: potentialWinnings,
-          market_id: option.market_id,
-          market_option_id: option.id
+          market_id: pendingBet.option.market_id,
+          market_option_id: pendingBet.option.id
         });
       if (error) throw error;
-      await updateWallet(-stake);
-      setMarketStakes((prev) => ({ ...prev, [option.id]: '' }));
+      await updateWallet(-pendingBet.stake);
+      setMarketStakes((prev) => ({ ...prev, [pendingBet.option!.id]: '' }));
       toast.success(`Bet placed! Potential winnings: KES ${potentialWinnings.toFixed(2)}`);
     } catch (error) {
       console.error('Error placing bet:', error);
       toast.error('Failed to place bet. Please try again.');
     } finally {
       setBettingOnOption(null);
+      setShowBetConfirmation(false);
+      setPendingBet(null);
     }
   };
 
@@ -497,6 +535,54 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         </div>
       </CardContent>
+      {showBetConfirmation && pendingBet && (
+        <Dialog open={showBetConfirmation} onOpenChange={setShowBetConfirmation}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Your Bet</DialogTitle>
+              <DialogDescription>
+                Please review your bet details before confirming.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Stake:</span>
+                    <div className="text-lg font-bold text-primary">KES {pendingBet.stake}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium">Odds:</span>
+                    <div className="text-lg font-bold">{pendingBet.odds}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium">Potential Winnings:</span>
+                    <div className="text-lg font-bold text-success">KES {(pendingBet.stake * pendingBet.odds).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium">Bet Type:</span>
+                    <div className="text-lg font-bold">
+                      {pendingBet.type === 'option' ? pendingBet.option?.label : pendingBet.type.toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <Button variant="outline" onClick={() => setShowBetConfirmation(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmBet}
+                  className="flex-1"
+                  variant="gradient"
+                >
+                  Confirm Bet
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 };
