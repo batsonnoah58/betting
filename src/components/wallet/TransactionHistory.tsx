@@ -133,14 +133,14 @@ export const TransactionHistory: React.FC = () => {
               return (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors gap-2 sm:gap-0"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted flex-shrink-0">
                       {getTransactionIcon(transaction.type)}
                     </div>
-                    <div>
-                      <div className="font-medium text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">
                         {transaction.description}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -149,7 +149,7 @@ export const TransactionHistory: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
                     <Badge variant="outline" className={badge.className}>
                       {badge.text}
                     </Badge>

@@ -101,102 +101,71 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <span>Deposit Funds</span>
-          </DialogTitle>
+          <DialogTitle>Deposit Funds</DialogTitle>
           <DialogDescription>
-            Add money to your wallet using PayPal
+            Add money to your wallet to start betting. Minimum deposit is KES 100.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-6">
+        
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="amount">Deposit Amount (KSH)</Label>
+            <label htmlFor="amount" className="text-sm font-medium">
+              Amount (KES)
+            </label>
             <Input
               id="amount"
               type="number"
               placeholder="Enter amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              min="10"
-              max="10000"
-              step="0.01"
+              min="100"
+              className="h-10"
             />
-            {amount && (
-              <div className="text-sm text-muted-foreground">
-                Amount: {formatCurrency(amount)}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <Label>Payment Method</Label>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="p-4 border-2 rounded-lg border-primary bg-primary/5">
-                <Smartphone className="h-6 w-6 mx-auto mb-2 text-primary" />
-                <div className="text-sm font-medium text-center">PayPal</div>
-                <div className="text-xs text-muted-foreground text-center mt-1">
-                  Card, Bank, PayPal Balance
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <div className="text-sm text-muted-foreground mb-2">Quick amounts:</div>
-            <div className="grid grid-cols-3 gap-2">
-              {[50, 100, 250].map((quickAmount) => (
-                <Button
-                  key={quickAmount}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAmount(quickAmount.toString())}
-                  className="text-xs"
-                >
-                  KSH {quickAmount}
-                </Button>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Minimum: KES 100 | Maximum: KES 100,000
+            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">M-Pesa Phone Number *</Label>
-            <div className="relative">
-              <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="254700000000"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Enter your M-Pesa registered phone number for payment
-            </div>
+            <label htmlFor="phone" className="text-sm font-medium">
+              M-Pesa Phone Number
+            </label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="254700000000"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="h-10"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter your M-Pesa registered phone number
+            </p>
           </div>
 
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          {/* error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          ) */}
+
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleDeposit}
               disabled={!amount || !phoneNumber || parseFloat(amount) < 10 || isProcessing}
               className="flex-1"
-              variant="gradient"
             >
               {isProcessing ? 'Processing...' : `Deposit ${amount ? formatCurrency(amount) : ''}`}
             </Button>
-          </div>
-
-          <div className="text-xs text-center text-muted-foreground">
-            Minimum deposit: KSH 10. You can use M-Pesa to fund your PayPal account.
           </div>
         </div>
       </DialogContent>

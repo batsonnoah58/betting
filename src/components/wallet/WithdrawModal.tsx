@@ -114,82 +114,66 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold text-primary">
-            💰 Withdraw Funds
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            Withdraw your winnings to your PayPal account
+          <DialogTitle>Withdraw Funds</DialogTitle>
+          <DialogDescription>
+            Withdraw your winnings to your M-Pesa account. Minimum withdrawal is KES 2,000.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary mb-1">
-              {formatCurrency(user?.walletBalance || 0)}
-            </div>
-            <div className="text-muted-foreground">Available Balance</div>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="amount" className="text-sm font-medium">
+              Amount (KES)
+            </label>
+            <Input
+              id="amount"
+              type="number"
+              placeholder="Enter amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              min="2000"
+              max={user?.walletBalance || 0}
+              className="h-10"
+            />
+            <p className="text-xs text-muted-foreground">
+              Available: {formatCurrency(user?.walletBalance || 0)} | Minimum: KES 2,000
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Withdrawal Amount (KES)</Label>
-              <Input
-                id="amount"
-                type="number"
-                placeholder="2000"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="2000"
-                max={user?.walletBalance || 0}
-                step="0.01"
-                required
-              />
-              <div className="text-xs text-muted-foreground">
-                Minimum withdrawal: KES 2,000
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">M-Pesa Phone Number *</Label>
-              <div className="relative">
-                <Smartphone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="254700000000"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Enter your M-Pesa registered phone number for verification
-              </div>
-            </div>
+          <div className="space-y-2">
+            <label htmlFor="phone" className="text-sm font-medium">
+              M-Pesa Phone Number
+            </label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="254700000000"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="h-10"
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter your M-Pesa registered phone number
+            </p>
           </div>
 
-          <div className="bg-warning/10 border border-warning/20 p-4 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
-              <div className="text-sm">
-                <div className="font-medium text-warning-foreground">Important</div>
-                <div className="text-muted-foreground mt-1">
-                  • Minimum withdrawal: KES 2,000<br/>
-                  • Processing time: 1-3 business days<br/>
-                  • Funds will be sent to your M-Pesa account
-                </div>
-              </div>
+          {/* error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
-          </div>
+          ) */}
 
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="flex-1"
+            >
               Cancel
             </Button>
-            <Button
+            <Button 
               onClick={handleWithdraw}
               disabled={!user || !phoneNumber || !amount || isProcessing}
               className="flex-1"

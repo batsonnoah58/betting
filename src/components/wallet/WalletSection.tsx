@@ -65,9 +65,9 @@ export const WalletSection: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-3xl font-bold text-primary mb-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">
                 {formatCurrency(user?.walletBalance || 0)}
               </div>
               <div className="text-sm text-muted-foreground flex items-center space-x-1">
@@ -76,13 +76,13 @@ export const WalletSection: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowWithdrawModal(true)}
                 disabled={!canWithdraw}
-                className="flex items-center space-x-1"
+                className="flex items-center justify-center space-x-1 h-10 sm:h-9"
               >
                 <Minus className="h-4 w-4" />
                 <span>Withdraw</span>
@@ -91,7 +91,7 @@ export const WalletSection: React.FC = () => {
                 variant="gradient" 
                 size="sm"
                 onClick={() => setShowDepositModal(true)}
-                className="animate-pulse-glow"
+                className="animate-pulse-glow h-10 sm:h-9"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Deposit
@@ -101,13 +101,13 @@ export const WalletSection: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-border">
             <div className="text-center">
-              <div className="text-lg font-semibold text-success">
+              <div className="text-base sm:text-lg font-semibold text-success">
                 +{formatCurrency(todayStats.wins)}
               </div>
               <div className="text-xs text-muted-foreground">Today's Wins</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-semibold text-destructive">
+              <div className="text-base sm:text-lg font-semibold text-destructive">
                 -{formatCurrency(todayStats.losses)}
               </div>
               <div className="text-xs text-muted-foreground">Today's Losses</div>

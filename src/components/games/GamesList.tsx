@@ -118,20 +118,16 @@ export const GamesList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 md:space-y-6">
       <Card className="shadow-betting">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            <span>Today's Sure Odds</span>
-            <Badge variant="default" className="bg-gradient-primary">
-              {filteredGames.length} Matches
-            </Badge>
+            <Filter className="h-5 w-5 text-primary" />
+            <span>Today's Games</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2 mb-4">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
             <span className="text-sm font-medium">Filter by league:</span>
             <div className="flex flex-wrap gap-2">
               {leagues.map((league) => (
@@ -140,7 +136,7 @@ export const GamesList: React.FC = () => {
                   variant={selectedLeague === league ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedLeague(league)}
-                  className="text-xs"
+                  className="text-xs h-8"
                 >
                   {league === 'all' ? 'All Leagues' : league}
                 </Button>
@@ -151,8 +147,8 @@ export const GamesList: React.FC = () => {
       </Card>
 
       {isLoading ? (
-        <Card className="shadow-card">
-          <CardContent className="p-6">
+        <Card className="shadow-betting">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               <span className="ml-3 text-muted-foreground">Loading games...</span>
@@ -160,8 +156,8 @@ export const GamesList: React.FC = () => {
           </CardContent>
         </Card>
       ) : error ? (
-        <Card className="shadow-card">
-          <CardContent className="p-6">
+        <Card className="shadow-betting">
+          <CardContent className="p-4 sm:p-6">
             <div className="text-center py-8">
               <div className="text-destructive mb-2">{error}</div>
               <Button onClick={fetchGamesAndLeagues} variant="outline">
@@ -181,13 +177,17 @@ export const GamesList: React.FC = () => {
       )}
 
       {!isLoading && !error && filteredGames.length === 0 && (
-        <Card className="shadow-card">
-          <CardContent className="text-center py-12">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No games found</h3>
-            <p className="text-muted-foreground">
-              No matches available for the selected league today.
-            </p>
+        <Card className="shadow-betting">
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-center py-8">
+              <div className="text-muted-foreground mb-2">No games found</div>
+              <p className="text-sm text-muted-foreground">
+                {selectedLeague === 'all' 
+                  ? 'No games available today. Check back later for new matches.'
+                  : `No games found for ${selectedLeague}. Try selecting a different league.`
+                }
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}

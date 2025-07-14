@@ -192,10 +192,10 @@ export const AdminBetSettlement: React.FC = () => {
             placeholder="Search by user or team..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-64"
+            className="w-full sm:w-64 h-9"
           />
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
@@ -208,199 +208,165 @@ export const AdminBetSettlement: React.FC = () => {
         </div>
       </div>
 
-      {error && <div className="text-destructive mb-4">{error}</div>}
-
       {loading ? (
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-20 bg-muted rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading bets...</p>
+          <div className="text-destructive mb-2">{error}</div>
+          <Button onClick={fetchBets} variant="outline">Try Again</Button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Game</TableHead>
-                <TableHead>Bet Type</TableHead>
-                <TableHead>Stake</TableHead>
-                <TableHead>Odds</TableHead>
-                <TableHead>Potential</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    No bets found matching the criteria.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredBets.map((bet) => {
-                  const statusBadge = getStatusBadge(bet.status);
-                  const betTypeBadge = getBetTypeBadge(bet.bet_on);
-                  const StatusIcon = statusBadge.icon;
-
-                  return (
-                    <TableRow key={bet.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div className="font-medium text-sm">{bet.user?.full_name || 'Unknown'}</div>
-                            <div className="text-xs text-muted-foreground">User ID: {bet.user_id}</div>
-                          </div>
+        <div className="space-y-4">
+          {filteredBets.map((bet) => {
+            const statusBadge = getStatusBadge(bet.status);
+            const betTypeBadge = getBetTypeBadge(bet.bet_on);
+            const StatusIcon = statusBadge.icon;
+            
+            return (
+              <div key={bet.id} className="bg-card border border-border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <StatusIcon className="h-4 w-4" />
+                      <Badge className={statusBadge.className}>
+                        {statusBadge.text}
+                      </Badge>
+                      <Badge variant="outline" className={betTypeBadge.className}>
+                        {betTypeBadge.text}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{bet.user?.full_name || 'Unknown User'}</span>
+                      </div>
+                      
+                      {bet.game && (
+                        <div className="text-sm text-muted-foreground">
+                          {bet.game.home_team?.name} vs {bet.game.away_team?.name}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {bet.game?.home_team?.name} vs {bet.game?.away_team?.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Result: {bet.game?.result || 'Pending'}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={betTypeBadge.className}>
-                          {betTypeBadge.text}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                      )}
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                         <div className="flex items-center space-x-1">
-                          <DollarSign className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-medium">{formatCurrency(bet.stake)}</span>
+                          <DollarSign className="h-3 w-3" />
+                          <span>Stake: {formatCurrency(bet.stake)}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>{bet.odds}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-success">
-                          {formatCurrency(bet.potential_winnings)}
+                        <div className="flex items-center space-x-1">
+                          <span>Odds: {bet.odds}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={statusBadge.className}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {statusBadge.text}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(bet.placed_at).toLocaleDateString()}
+                        <div className="flex items-center space-x-1">
+                          <span>Potential: {formatCurrency(bet.potential_winnings)}</span>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(bet.placed_at).toLocaleTimeString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {bet.status === 'active' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => openSettlement(bet)}
-                          >
-                            Settle Bet
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                    {bet.status === 'active' && (
+                      <Button
+                        size="sm"
+                        onClick={() => openSettlement(bet)}
+                        className="w-full sm:w-auto"
+                      >
+                        Settle Bet
+                      </Button>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(bet.placed_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          
+          {filteredBets.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No bets found</p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Settlement Dialog */}
-      <Dialog open={showSettlement} onOpenChange={setShowSettlement}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Settle Bet</DialogTitle>
-            <DialogDescription>
-              Mark this bet as won or lost. If won, the user will receive their winnings.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedBet && (
+      {showSettlement && selectedBet && (
+        <Dialog open={showSettlement} onOpenChange={setShowSettlement}>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Settle Bet</DialogTitle>
+              <DialogDescription>
+                Update the status of this bet and process any winnings.
+              </DialogDescription>
+            </DialogHeader>
+            
             <div className="space-y-4">
               <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">User:</span>
-                    <div>{selectedBet.user?.full_name}</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>User:</span>
+                    <span className="font-medium">{selectedBet.user?.full_name}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Game:</span>
-                    <div>{selectedBet.game?.home_team?.name} vs {selectedBet.game?.away_team?.name}</div>
+                  <div className="flex justify-between">
+                    <span>Stake:</span>
+                    <span className="font-medium">{formatCurrency(selectedBet.stake)}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Bet Type:</span>
-                    <div>{getBetTypeBadge(selectedBet.bet_on).text}</div>
+                  <div className="flex justify-between">
+                    <span>Odds:</span>
+                    <span className="font-medium">{selectedBet.odds}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">Stake:</span>
-                    <div>{formatCurrency(selectedBet.stake)}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Odds:</span>
-                    <div>{selectedBet.odds}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Potential Winnings:</span>
-                    <div className="text-success font-medium">{formatCurrency(selectedBet.potential_winnings)}</div>
+                  <div className="flex justify-between">
+                    <span>Potential Winnings:</span>
+                    <span className="font-medium text-success">{formatCurrency(selectedBet.potential_winnings)}</span>
                   </div>
                 </div>
               </div>
-
-              <div>
+              
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Settlement Status</label>
-                <Select value={settlementStatus} onValueChange={(value) => setSettlementStatus(value as 'won' | 'lost')}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="won">Won</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {settlementStatus === 'won' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-800">
-                      User will receive {formatCurrency(selectedBet.potential_winnings)} in their wallet
-                    </span>
-                  </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant={settlementStatus === 'won' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSettlementStatus('won')}
+                    className="flex-1"
+                  >
+                    Won
+                  </Button>
+                  <Button
+                    variant={settlementStatus === 'lost' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSettlementStatus('lost')}
+                    className="flex-1"
+                  >
+                    Lost
+                  </Button>
                 </div>
-              )}
-
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowSettlement(false)}
-                  disabled={settlementLoading}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleSettlement}
-                  variant={settlementStatus === 'won' ? 'default' : 'destructive'}
-                  disabled={settlementLoading}
-                >
-                  {settlementLoading ? 'Settling...' : `Mark as ${settlementStatus}`}
-                </Button>
-              </DialogFooter>
+              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSettlement(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSettlement}
+                disabled={settlementLoading}
+                className="flex-1 sm:flex-none"
+              >
+                {settlementLoading ? 'Processing...' : 'Confirm Settlement'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }; 

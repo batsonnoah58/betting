@@ -278,13 +278,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
   return (
     <Card className="shadow-betting hover:shadow-glow transition-all duration-300 border border-primary/10">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-2 md:gap-0">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2 sm:gap-0">
           <div className="flex items-center space-x-2">
             <Badge className={confidence.className}>
               {confidence.text}
             </Badge>
-            <Badge variant="outline">{game.league}</Badge>
+            <Badge variant="outline" className="text-xs">{game.league}</Badge>
           </div>
           <div className="flex flex-col items-end text-sm text-muted-foreground">
             <div className="flex items-center space-x-1">
@@ -295,17 +295,17 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-4 mb-6 gap-2 sm:gap-0">
+        <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-4 mb-6 gap-3 sm:gap-0">
           <div className="text-center flex-1">
             <div className="text-2xl mb-1">{game.homeTeam.logo}</div>
-            <div className="font-semibold text-sm">{game.homeTeam.name}</div>
+            <div className="font-semibold text-sm leading-tight">{game.homeTeam.name}</div>
           </div>
           <div className="text-center px-4">
             <div className="text-lg font-bold text-muted-foreground">VS</div>
           </div>
           <div className="text-center flex-1">
             <div className="text-2xl mb-1">{game.awayTeam.logo}</div>
-            <div className="font-semibold text-sm">{game.awayTeam.name}</div>
+            <div className="font-semibold text-sm leading-tight">{game.awayTeam.name}</div>
           </div>
         </div>
 
@@ -321,12 +321,12 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {/* Home Win */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
+          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Home Win</div>
-              <div className="text-lg font-bold text-primary">{game.odds.home}</div>
+              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.home}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -335,7 +335,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   placeholder="Stake"
                   value={stakes.home}
                   onChange={(e) => setStakes(prev => ({ ...prev, home: e.target.value }))}
-                  className="text-xs h-8"
+                  className="text-xs h-8 sm:h-9"
                   min="10"
                   max={user?.walletBalance || 0}
                 />
@@ -344,7 +344,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   variant="betting"
                   onClick={() => handleBet('home')}
                   disabled={!stakes.home || bettingOn === 'home'}
-                  className="w-full text-xs h-7"
+                  className="w-full text-xs h-8 sm:h-9"
                 >
                   {bettingOn === 'home' ? 'Placing...' : 'Bet'}
                 </Button>
@@ -358,10 +358,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
 
           {/* Draw */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
+          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Draw</div>
-              <div className="text-lg font-bold text-primary">{game.odds.draw}</div>
+              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.draw}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -370,7 +370,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   placeholder="Stake"
                   value={stakes.draw}
                   onChange={(e) => setStakes(prev => ({ ...prev, draw: e.target.value }))}
-                  className="text-xs h-8"
+                  className="text-xs h-8 sm:h-9"
                   min="10"
                   max={user?.walletBalance || 0}
                 />
@@ -379,7 +379,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   variant="betting"
                   onClick={() => handleBet('draw')}
                   disabled={!stakes.draw || bettingOn === 'draw'}
-                  className="w-full text-xs h-7"
+                  className="w-full text-xs h-8 sm:h-9"
                 >
                   {bettingOn === 'draw' ? 'Placing...' : 'Bet'}
                 </Button>
@@ -393,10 +393,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
 
           {/* Away Win */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
+          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Away Win</div>
-              <div className="text-lg font-bold text-primary">{game.odds.away}</div>
+              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.away}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -405,7 +405,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   placeholder="Stake"
                   value={stakes.away}
                   onChange={(e) => setStakes(prev => ({ ...prev, away: e.target.value }))}
-                  className="text-xs h-8"
+                  className="text-xs h-8 sm:h-9"
                   min="10"
                   max={user?.walletBalance || 0}
                 />
@@ -414,7 +414,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   variant="betting"
                   onClick={() => handleBet('away')}
                   disabled={!stakes.away || bettingOn === 'away'}
-                  className="w-full text-xs h-7"
+                  className="w-full text-xs h-8 sm:h-9"
                 >
                   {bettingOn === 'away' ? 'Placing...' : 'Bet'}
                 </Button>
@@ -431,11 +431,11 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
         {/* Flexible Markets Section */}
         {markets.length > 0 && (
           <div className="mt-6">
-            <div className="font-bold mb-2">Other Markets</div>
+            <div className="font-bold mb-3 text-base">Other Markets</div>
             {/* Controls for filtering, sorting, grouping */}
-            <div className="flex flex-col md:flex-row gap-2 mb-4 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 mb-4 items-start sm:items-center">
               <Select value={marketTypeFilter} onValueChange={setMarketTypeFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40 h-9">
                   <SelectValue placeholder="Filter by Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -449,10 +449,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                 placeholder="Search option label..."
                 value={optionLabelFilter}
                 onChange={(e) => setOptionLabelFilter(e.target.value)}
-                className="w-48"
+                className="w-full sm:w-48 h-9"
               />
               <Select value={marketSort} onValueChange={(v) => setMarketSort(v as 'name' | 'type')}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32 h-9">
                   <SelectValue placeholder="Sort Markets" />
                 </SelectTrigger>
                 <SelectContent>
@@ -460,7 +460,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   <SelectItem value="type">Sort by Type</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <span className="text-xs">Odds Asc</span>
                 <Switch checked={optionOddsAsc} onCheckedChange={setOptionOddsAsc} />
               </div>
@@ -469,7 +469,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             {Object.keys(groupedMarkets).map((type) => (
               (marketTypeFilter === 'all' || marketTypeFilter === type) && groupedMarkets[type].length > 0 && (
                 <div key={type} className="mb-6">
-                  <div className="font-semibold text-primary mb-2">{type}</div>
+                  <div className="font-semibold text-primary mb-3 text-sm">{type}</div>
                   {groupedMarkets[type]
                     .sort((a, b) => {
                       if (marketSort === 'name') return a.name.localeCompare(b.name);
@@ -478,12 +478,12 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                     })
                     .map((market) => (
                       <div key={market.id} className="mb-4 p-3 rounded-lg border border-primary/10 bg-muted">
-                        <div className="font-semibold mb-2">{market.name} <span className="text-xs text-muted-foreground">({market.type})</span></div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="font-semibold mb-3 text-sm">{market.name} <span className="text-xs text-muted-foreground">({market.type})</span></div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                           {filterAndSortOptions(market.id).map((option) => (
-                            <div key={option.id} className="bg-betting-background border border-primary/20 rounded-lg p-3 flex flex-col items-center">
-                              <div className="text-xs text-muted-foreground mb-1">{option.label}</div>
-                              <div className="text-lg font-bold text-primary">{option.odds}</div>
+                            <div key={option.id} className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 flex flex-col items-center">
+                              <div className="text-xs text-muted-foreground mb-1 text-center">{option.label}</div>
+                              <div className="text-base sm:text-lg font-bold text-primary">{option.odds}</div>
                               {canBet ? (
                                 <div className="w-full mt-2 space-y-2">
                                   <Input
@@ -491,7 +491,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                                     placeholder="Stake"
                                     value={marketStakes[option.id] || ''}
                                     onChange={(e) => setMarketStakes((prev) => ({ ...prev, [option.id]: e.target.value }))}
-                                    className="text-xs h-8"
+                                    className="text-xs h-8 sm:h-9"
                                     min="10"
                                     max={user?.walletBalance || 0}
                                   />
@@ -500,7 +500,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                                     variant="betting"
                                     onClick={() => handleMarketOptionBet(option)}
                                     disabled={!marketStakes[option.id] || bettingOnOption === option.id}
-                                    className="w-full text-xs h-7"
+                                    className="w-full text-xs h-8 sm:h-9"
                                   >
                                     {bettingOnOption === option.id ? 'Placing...' : 'Bet'}
                                   </Button>
@@ -523,7 +523,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
         )}
 
         <div className="mt-4 pt-3 border-t border-border">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-muted-foreground gap-2 sm:gap-0">
             <div className="flex items-center space-x-1">
               <MapPin className="h-3 w-3" />
               <span>Match ID: #{game.id}</span>
@@ -537,7 +537,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       </CardContent>
       {showBetConfirmation && pendingBet && (
         <Dialog open={showBetConfirmation} onOpenChange={setShowBetConfirmation}>
-          <DialogContent>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Confirm Your Bet</DialogTitle>
               <DialogDescription>
@@ -546,7 +546,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="font-medium">Stake:</span>
                     <div className="text-lg font-bold text-primary">KES {pendingBet.stake}</div>
@@ -567,7 +567,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                   </div>
                 </div>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <Button variant="outline" onClick={() => setShowBetConfirmation(false)} className="flex-1">
                   Cancel
                 </Button>
