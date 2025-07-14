@@ -9,9 +9,10 @@ import { AdminResultsManager } from './AdminResultsManager';
 import { AdminTeamsManager } from './AdminTeamsManager';
 import { AdminLeaguesManager } from './AdminLeaguesManager';
 import { AdminUsersManager } from './AdminUsersManager';
+import { AdminBetSettlement } from './AdminBetSettlement';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'games' | 'results' | 'teams' | 'leagues' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'games' | 'results' | 'teams' | 'leagues' | 'users' | 'bets'>('overview');
 
   const stats = [
     {
@@ -48,6 +49,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'games', label: 'Games', icon: Trophy },
     { id: 'results', label: 'Results', icon: List },
+    { id: 'bets', label: 'Bets', icon: DollarSign },
     { id: 'teams', label: 'Teams', icon: Calendar },
     { id: 'leagues', label: 'Leagues', icon: Flag },
     { id: 'users', label: 'Users', icon: Users },
@@ -111,6 +113,7 @@ export const AdminDashboard: React.FC = () => {
 
         {activeTab === 'games' && <AdminGamesManager />}
         {activeTab === 'results' && <AdminResultsManager />}
+        {activeTab === 'bets' && <AdminBetSettlement />}
         {activeTab === 'teams' && <AdminTeamsManager />}
         {activeTab === 'leagues' && <AdminLeaguesManager />}
         {activeTab === 'users' && <AdminUsersManager />}

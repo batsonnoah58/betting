@@ -8,7 +8,7 @@ import { Wallet, Plus, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const WalletSection: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [todayStats, setTodayStats] = useState({ wins: 0, losses: 0 });
@@ -125,11 +125,21 @@ export const WalletSection: React.FC = () => {
       </Card>
 
       {showDepositModal && (
-        <DepositModal onClose={() => setShowDepositModal(false)} />
+        <DepositModal 
+          onClose={() => {
+            setShowDepositModal(false);
+            refreshUser(); // Refresh wallet after deposit
+          }} 
+        />
       )}
 
       {showWithdrawModal && (
-        <WithdrawModal onClose={() => setShowWithdrawModal(false)} />
+        <WithdrawModal 
+          onClose={() => {
+            setShowWithdrawModal(false);
+            refreshUser(); // Refresh wallet after withdrawal
+          }} 
+        />
       )}
     </>
   );

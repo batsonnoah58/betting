@@ -33,16 +33,27 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
     if (depositAmount < 10) {
       toast({
         title: "Minimum Deposit",
-        description: "Minimum deposit amount is KSH 10",
+        description: "Minimum deposit amount is KES 10",
         variant: "destructive",
       });
       return;
     }
 
-    if (!phoneNumber || phoneNumber.length < 10) {
+    if (depositAmount > 100000) {
       toast({
-        title: "Phone Number Required",
-        description: "Please enter a valid M-Pesa phone number (e.g., 254700000000).",
+        title: "Maximum Deposit",
+        description: "Maximum deposit amount is KES 100,000",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate phone number format (Kenyan format)
+    const phoneRegex = /^254[17]\d{8}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Kenyan phone number (e.g., 254700000000)",
         variant: "destructive",
       });
       return;

@@ -18,6 +18,7 @@ interface AuthContextType {
   signup: (fullName: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateWallet: (amount: number) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -183,6 +184,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshUser = async () => {
+    if (session?.user) {
+      const userProfile = await fetchUserProfile(session.user.id);
+      setUser(userProfile);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
@@ -197,7 +205,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       signup, 
       logout, 
-      updateWallet 
+      updateWallet,
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

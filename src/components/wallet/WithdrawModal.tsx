@@ -28,20 +28,22 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
       return;
     }
 
-    if (!phoneNumber || phoneNumber.length < 10) {
+    // Validate phone number format (Kenyan format)
+    const phoneRegex = /^254[17]\d{8}$/;
+    if (!phoneRegex.test(phoneNumber)) {
       toast({
-        title: "Phone Number Required",
-        description: "Please enter a valid M-Pesa phone number (e.g., 254700000000).",
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Kenyan phone number (e.g., 254700000000)",
         variant: "destructive",
       });
       return;
     }
 
     const withdrawAmount = parseFloat(amount);
-    if (isNaN(withdrawAmount) || withdrawAmount < 20) {
+    if (isNaN(withdrawAmount) || withdrawAmount < 2000) {
       toast({
         title: "Invalid Amount",
-        description: "Minimum withdrawal amount is $20.",
+        description: "Minimum withdrawal amount is KES 2,000.",
         variant: "destructive",
       });
       return;
@@ -51,6 +53,15 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
       toast({
         title: "Insufficient Balance",
         description: "Your withdrawal amount exceeds your wallet balance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (withdrawAmount > 50000) {
+      toast({
+        title: "Maximum Withdrawal",
+        description: "Maximum withdrawal amount is KES 50,000.",
         variant: "destructive",
       });
       return;

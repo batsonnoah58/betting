@@ -36,6 +36,7 @@ const Games: React.FC = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch transactions for the user
   useEffect(() => {
@@ -102,6 +103,17 @@ const Games: React.FC = () => {
       );
     });
   }
+  // Apply search filter
+  if (searchTerm) {
+    filtered = filtered.filter((g) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        g.home_team?.name?.toLowerCase().includes(searchLower) ||
+        g.away_team?.name?.toLowerCase().includes(searchLower) ||
+        g.league?.toLowerCase().includes(searchLower)
+      );
+    });
+  }
   filtered = [...filtered].sort((a, b) => {
     if (sort === 'soonest') return new Date(a.kick_off_time).getTime() - new Date(b.kick_off_time).getTime();
     return new Date(b.kick_off_time).getTime() - new Date(a.kick_off_time).getTime();
@@ -155,6 +167,12 @@ const Games: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
                 <div className="font-bold text-lg">Games</div>
                 <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Search teams or leagues..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full md:w-64"
+                  />
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm">
