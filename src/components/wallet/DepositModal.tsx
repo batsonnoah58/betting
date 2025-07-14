@@ -3,7 +3,7 @@ import { useAuth } from '../AuthGuard';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Smartphone, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
+import { Smartphone, DollarSign, CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,9 +11,12 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
+type PaymentMethod = 'mpesa' | 'paypal';
+
 export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa');
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -40,12 +43,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       return;
     }
 
-    // Validate phone number format (Kenyan format)
-    const phoneRegex = /^254[17]\d{8}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      setErrorMessage("Please enter a valid Kenyan phone number (e.g., 254700000000)");
-      setStatus('error');
-      return;
+    // Validate phone number for M-Pesa
+    if (paymentMethod === 'mpesa') {
+      const phoneRegex = /^254[17]\d{8}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setErrorMessage("Please enter a valid Kenyan phone number (e.g., 254700000000)");
+        setStatus('error');
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -59,29 +64,55 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
         throw new Error("User not authenticated");
       }
 
-      // Call M-Pesa deposit function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          amount: depositAmount,
-          phoneNumber,
-          userId: user?.id
-        }),
-      });
+      let response;
+      let result;
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to initiate deposit');
+      if (paymentMethod === 'mpesa') {
+        // Call M-Pesa deposit function
+        response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-deposit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            amount: depositAmount,
+            phoneNumber,
+            userId: user?.id
+          }),
+        });
+      } else {
+        // Call PayPal payment function
+        response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-payment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            amount: depositAmount,
+            userId: user?.id
+          }),
+        });
       }
 
-      setStatus('success');
-      toast.success("STK Push sent to your phone. Please check your M-Pesa and enter the PIN to complete the deposit.");
+      result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to initiate payment');
+      }
+
+      if (paymentMethod === 'paypal' && result.approval_url) {
+        // Redirect to PayPal for payment
+        window.open(result.approval_url, '_blank');
+        setStatus('success');
+        toast.success("PayPal payment initiated. Please complete the payment in the new window.");
+      } else {
+        setStatus('success');
+        toast.success("STK Push sent to your phone. Please check your M-Pesa and enter the PIN to complete the deposit.");
+      }
       
       // Close modal after a delay to show success message
       setTimeout(() => {
@@ -90,10 +121,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       }, 3000);
 
     } catch (error) {
-      console.error('Deposit error:', error);
-      setErrorMessage(error instanceof Error ? error.message : "Failed to process deposit");
+      console.error('Payment error:', error);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to process payment");
       setStatus('error');
-      toast.error(error instanceof Error ? error.message : "Failed to process deposit");
+      toast.error(error instanceof Error ? error.message : "Failed to process payment");
     } finally {
       setIsProcessing(false);
     }
@@ -108,6 +139,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const resetForm = () => {
     setAmount('');
     setPhoneNumber('');
+    setPaymentMethod('mpesa');
     setStatus('idle');
     setErrorMessage('');
   };
@@ -126,7 +158,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
             <span>Deposit Funds</span>
           </DialogTitle>
           <DialogDescription>
-            Add money to your wallet using M-Pesa. Minimum deposit is KES 100.
+            Add money to your wallet using M-Pesa or PayPal. Minimum deposit is KES 100.
           </DialogDescription>
         </DialogHeader>
         
@@ -134,13 +166,45 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
           {status === 'success' ? (
             <div className="text-center py-6">
               <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">STK Push Sent!</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {paymentMethod === 'paypal' ? 'PayPal Payment Initiated!' : 'STK Push Sent!'}
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Please check your phone and enter your M-Pesa PIN to complete the deposit.
+                {paymentMethod === 'paypal' 
+                  ? 'Please complete the payment in the new window that opened.'
+                  : 'Please check your phone and enter your M-Pesa PIN to complete the deposit.'
+                }
               </p>
             </div>
           ) : (
             <>
+              {/* Payment Method Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Payment Method</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('mpesa')}
+                    className="flex items-center space-x-2"
+                    disabled={isProcessing}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    <span>M-Pesa</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={paymentMethod === 'paypal' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('paypal')}
+                    className="flex items-center space-x-2"
+                    disabled={isProcessing}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span>PayPal</span>
+                  </Button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label htmlFor="amount" className="text-sm font-medium">
                   Amount (KES)
@@ -161,23 +225,25 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium">
-                  M-Pesa Phone Number
-                </label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="254700000000"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="h-10"
-                  disabled={isProcessing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter your M-Pesa registered phone number
-                </p>
-              </div>
+              {paymentMethod === 'mpesa' && (
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="text-sm font-medium">
+                    M-Pesa Phone Number
+                  </label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="254700000000"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="h-10"
+                    disabled={isProcessing}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter your M-Pesa registered phone number
+                  </p>
+                </div>
+              )}
 
               {status === 'error' && errorMessage && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -199,7 +265,13 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                 </Button>
                 <Button 
                   onClick={handleDeposit}
-                  disabled={!amount || !phoneNumber || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
+                  disabled={
+                    !amount || 
+                    parseFloat(amount) < 100 || 
+                    parseFloat(amount) > 100000 || 
+                    isProcessing ||
+                    (paymentMethod === 'mpesa' && !phoneNumber)
+                  }
                   className="flex-1"
                 >
                   {isProcessing ? (
@@ -215,14 +287,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
 
               <div className="bg-muted/50 p-3 rounded-lg">
                 <div className="flex items-start space-x-2">
-                  <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  {paymentMethod === 'mpesa' ? (
+                    <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  )}
                   <div className="text-xs text-muted-foreground">
-                    <div className="font-medium mb-1">How it works:</div>
+                    <div className="font-medium mb-1">
+                      {paymentMethod === 'mpesa' ? 'M-Pesa Payment:' : 'PayPal Payment:'}
+                    </div>
                     <ul className="space-y-1 list-disc list-inside">
-                      <li>Enter amount and phone number</li>
-                      <li>Click "Deposit" to receive STK Push</li>
-                      <li>Enter your M-Pesa PIN when prompted</li>
-                      <li>Funds will be added to your wallet instantly</li>
+                      {paymentMethod === 'mpesa' ? (
+                        <>
+                          <li>Enter amount and phone number</li>
+                          <li>Click "Deposit" to receive STK Push</li>
+                          <li>Enter your M-Pesa PIN when prompted</li>
+                          <li>Funds will be added to your wallet instantly</li>
+                        </>
+                      ) : (
+                        <>
+                          <li>Enter amount and click "Deposit"</li>
+                          <li>Complete payment in PayPal window</li>
+                          <li>Funds will be added to your wallet instantly</li>
+                        </>
+                      )}
                     </ul>
                   </div>
                 </div>
