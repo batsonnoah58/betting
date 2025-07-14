@@ -2,8 +2,10 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Lock, User, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const LoginPrompt: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <div className="text-center py-8">
       <Card className="max-w-md mx-auto shadow-betting">
@@ -33,7 +35,7 @@ export const LoginPrompt: React.FC = () => {
             <p className="text-sm text-muted-foreground mb-4">
               Already have an account? Login to continue
             </p>
-            <Button variant="gradient" className="w-full">
+            <Button variant="gradient" className="w-full" onClick={() => navigate('/login')}>
               Login / Register
             </Button>
           </div>

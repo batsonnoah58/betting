@@ -251,32 +251,45 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
   return (
     <Card className="shadow-betting hover:shadow-glow transition-all duration-300 border border-primary/10">
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-2 md:gap-0">
           <div className="flex items-center space-x-2">
             <Badge className={confidence.className}>
               {confidence.text}
             </Badge>
             <Badge variant="outline">{game.league}</Badge>
           </div>
-          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{formatTime(game.kickOffTime)}</span>
+          <div className="flex flex-col items-end text-sm text-muted-foreground">
+            <div className="flex items-center space-x-1">
+              <Clock className="h-3 w-3" />
+              <span>{formatTime(game.kickOffTime)}</span>
+            </div>
+            <div className="text-xs mt-1">{new Date(game.kickOffTime).toLocaleDateString()}</div>
           </div>
         </div>
 
-        <div className="flex items-center justify-center space-x-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-4 mb-6 gap-2 sm:gap-0">
           <div className="text-center flex-1">
             <div className="text-2xl mb-1">{game.homeTeam.logo}</div>
             <div className="font-semibold text-sm">{game.homeTeam.name}</div>
           </div>
-          
           <div className="text-center px-4">
             <div className="text-lg font-bold text-muted-foreground">VS</div>
           </div>
-          
           <div className="text-center flex-1">
             <div className="text-2xl mb-1">{game.awayTeam.logo}</div>
             <div className="font-semibold text-sm">{game.awayTeam.name}</div>
+          </div>
+        </div>
+
+        {/* Venue and Tips (placeholder) */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2 sm:gap-0">
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            <span>Venue: <span className="font-medium">TBA</span></span>
+          </div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <TrendingUp className="h-3 w-3" />
+            <span>Tip: <span className="font-medium">Coming soon</span></span>
           </div>
         </div>
 

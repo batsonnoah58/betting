@@ -21,43 +21,52 @@ export const Header: React.FC = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{user?.fullName}</span>
-            </div>
-
-            {user && (
-              <Link to="/games">
-                <Button variant="outline" size="sm" className="text-muted-foreground hover:text-foreground">
-                  Browse Games
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{user.fullName}</span>
+                </div>
+                {user && (
+                  <Link to="/games">
+                    <Button variant="outline" size="sm" className="text-muted-foreground hover:text-foreground">
+                      Browse Games
+                    </Button>
+                  </Link>
+                )}
+                {user && !user.isAdmin && (
+                  <Link to="/bet-history">
+                    <Button variant="outline" size="sm" className="text-muted-foreground hover:text-foreground">
+                      My Bets
+                    </Button>
+                  </Link>
+                )}
+                {user?.isAdmin && (
+                  <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-md">
+                    <Settings className="h-3 w-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">Admin</span>
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={logout}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Logout</span>
                 </Button>
-              </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="outline" size="sm" className="text-primary font-semibold">Login</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button variant="default" size="sm" className="font-semibold">Sign Up</Button>
+                </Link>
+              </>
             )}
-
-            {user && !user.isAdmin && (
-              <Link to="/bet-history">
-                <Button variant="outline" size="sm" className="text-muted-foreground hover:text-foreground">
-                  My Bets
-                </Button>
-              </Link>
-            )}
-
-            {user?.isAdmin && (
-              <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-md">
-                <Settings className="h-3 w-3 text-primary" />
-                <span className="text-xs font-medium text-primary">Admin</span>
-              </div>
-            )}
-
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={logout}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline ml-2">Logout</span>
-            </Button>
           </div>
 
           {/* Hamburger for mobile */}
@@ -74,39 +83,52 @@ export const Header: React.FC = () => {
         {/* Mobile Nav Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 flex flex-col space-y-2 animate-fade-in bg-card rounded-lg p-4 shadow-card">
-            <div className="flex items-center space-x-2 text-sm mb-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{user?.fullName}</span>
-            </div>
-            {user && (
-              <Link to="/games" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full text-left">
-                  Browse Games
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 text-sm mb-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">{user.fullName}</span>
+                </div>
+                {user && (
+                  <Link to="/games" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full text-left">
+                      Browse Games
+                    </Button>
+                  </Link>
+                )}
+                {user && !user.isAdmin && (
+                  <Link to="/bet-history" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full text-left">
+                      My Bets
+                    </Button>
+                  </Link>
+                )}
+                {user?.isAdmin && (
+                  <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-md mb-2">
+                    <Settings className="h-3 w-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">Admin</span>
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { setMobileMenuOpen(false); logout(); }}
+                  className="w-full text-left"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="ml-2">Logout</span>
                 </Button>
-              </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" size="sm" className="w-full text-left text-primary font-semibold">Login</Button>
+                </Link>
+                <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="default" size="sm" className="w-full text-left font-semibold">Sign Up</Button>
+                </Link>
+              </>
             )}
-            {user && !user.isAdmin && (
-              <Link to="/bet-history" onClick={() => setMobileMenuOpen(false)}>
-                <Button variant="outline" size="sm" className="w-full text-left">
-                  My Bets
-                </Button>
-              </Link>
-            )}
-            {user?.isAdmin && (
-              <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-md mb-2">
-                <Settings className="h-3 w-3 text-primary" />
-                <span className="text-xs font-medium text-primary">Admin</span>
-              </div>
-            )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => { setMobileMenuOpen(false); logout(); }}
-              className="w-full text-left"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="ml-2">Logout</span>
-            </Button>
           </div>
         )}
       </div>

@@ -248,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       grantDailyAccess, 
       hasDailyAccess 
     }}>
-      {user ? children : <AuthPrompt />}
+      {children}
     </AuthContext.Provider>
   );
 };
