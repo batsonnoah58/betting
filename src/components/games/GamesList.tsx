@@ -28,11 +28,7 @@ interface Game {
   confidence: string;
 }
 
-interface GamesListProps {
-  showBlurredOdds?: boolean;
-}
-
-export const GamesList: React.FC<GamesListProps> = ({ showBlurredOdds = false }) => {
+export const GamesList: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [leagues, setLeagues] = useState<string[]>(['all']);
   const [selectedLeague, setSelectedLeague] = useState<string>('all');
@@ -166,7 +162,7 @@ export const GamesList: React.FC<GamesListProps> = ({ showBlurredOdds = false })
       <div className="grid gap-4">
         {filteredGames.map((game, index) => (
           <div key={game.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-            <GameCard game={game} showBlurredOdds={showBlurredOdds} />
+            <GameCard game={game} />
           </div>
         ))}
       </div>

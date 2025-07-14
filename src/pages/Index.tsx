@@ -39,12 +39,11 @@ const Index = () => {
         <ul className="list-disc list-inside text-sm text-muted-foreground pl-2">
           <li>Browse today’s matches and tips below</li>
           <li>Sign up or log in to unlock odds and place bets</li>
-          <li>Pay KES 500 to access today’s premium odds</li>
           <li>All odds and tips are updated daily</li>
         </ul>
       </section>
       <main className="container mx-auto px-2 md:px-4 lg:px-6 py-4 md:py-6 space-y-6 w-full max-w-full">
-        <GamesList showBlurredOdds={true} />
+        <GamesList />
         <LoginPrompt />
       </main>
       <Toaster />

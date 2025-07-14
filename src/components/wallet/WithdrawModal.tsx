@@ -59,7 +59,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('paypal-withdraw', {
+      const { data, error } = await supabase.functions.invoke('mpesa-withdraw', {
         body: {
           amount: withdrawAmount,
           phoneNumber: phoneNumber,
@@ -71,22 +71,12 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
         throw new Error(error.message);
       }
 
-      // Update wallet balance
-      await updateWallet(-withdrawAmount);
-
-      // Add transaction record
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'withdrawal',
-          amount: withdrawAmount,
-          description: `PayPal withdrawal to ${phoneNumber}`
-        });
+      // Note: The mpesa-withdraw function already updates the wallet balance
+      // So we don't need to call updateWallet here
 
       toast({
         title: "Withdrawal Initiated",
-        description: "Your withdrawal has been processed. Funds will be sent to your PayPal account.",
+        description: "Your withdrawal has been processed. Funds will be sent to your M-Pesa account.",
         variant: "default",
       });
       

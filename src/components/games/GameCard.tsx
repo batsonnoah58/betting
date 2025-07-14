@@ -23,7 +23,6 @@ interface Game {
 
 interface GameCardProps {
   game: Game;
-  showBlurredOdds?: boolean;
 }
 
 // Add types for Market and MarketOption
@@ -42,8 +41,8 @@ interface MarketOption {
   created_at: string;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = false }) => {
-  const { user, updateWallet, hasDailyAccess } = useAuth();
+export const GameCard: React.FC<GameCardProps> = ({ game }) => {
+  const { user, updateWallet } = useAuth();
   const [stakes, setStakes] = useState({ home: '', draw: '', away: '' });
   const [bettingOn, setBettingOn] = useState<'home' | 'draw' | 'away' | null>(null);
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -102,11 +101,6 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
   const handleBet = async (betType: 'home' | 'draw' | 'away') => {
     if (!user) {
       toast.error("Please login to place bets");
-      return;
-    }
-
-    if (!hasDailyAccess()) {
-      toast.error("Please pay KES 500 to access betting");
       return;
     }
     
@@ -169,10 +163,6 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
   const handleMarketOptionBet = async (option: MarketOption) => {
     if (!user) {
       toast.error("Please login to place bets");
-      return;
-    }
-    if (!hasDailyAccess()) {
-      toast.error("Please pay KES 500 to access betting");
       return;
     }
     const stake = parseFloat(marketStakes[option.id] || '');
@@ -246,7 +236,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
   };
 
   const confidence = getConfidenceBadge(game.confidence);
-  const canBet = user && hasDailyAccess() && !showBlurredOdds;
+  const canBet = !!user;
 
   return (
     <Card className="shadow-betting hover:shadow-glow transition-all duration-300 border border-primary/10">
@@ -298,9 +288,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
           <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Home Win</div>
-              <div className={`text-lg font-bold ${showBlurredOdds ? 'blur-sm select-none' : 'text-primary'}`}>
-                {showBlurredOdds ? '***' : game.odds.home}
-              </div>
+              <div className="text-lg font-bold text-primary">{game.odds.home}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -326,7 +314,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Pay to bet and get odds' : 'Login & Pay to Bet'}</div>
+                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
               </div>
             )}
           </div>
@@ -335,9 +323,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
           <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Draw</div>
-              <div className={`text-lg font-bold ${showBlurredOdds ? 'blur-sm select-none' : 'text-primary'}`}>
-                {showBlurredOdds ? '***' : game.odds.draw}
-              </div>
+              <div className="text-lg font-bold text-primary">{game.odds.draw}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -363,7 +349,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Pay to bet and get odds' : 'Login & Pay to Bet'}</div>
+                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
               </div>
             )}
           </div>
@@ -372,9 +358,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
           <div className="bg-betting-background border border-primary/20 rounded-lg p-3 hover:bg-betting-hover transition-colors">
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Away Win</div>
-              <div className={`text-lg font-bold ${showBlurredOdds ? 'blur-sm select-none' : 'text-primary'}`}>
-                {showBlurredOdds ? '***' : game.odds.away}
-              </div>
+              <div className="text-lg font-bold text-primary">{game.odds.away}</div>
             </div>
             {canBet ? (
               <div className="space-y-2">
@@ -400,7 +384,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Pay to bet and get odds' : 'Login & Pay to Bet'}</div>
+                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
               </div>
             )}
           </div>
@@ -461,7 +445,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
                           {filterAndSortOptions(market.id).map((option) => (
                             <div key={option.id} className="bg-betting-background border border-primary/20 rounded-lg p-3 flex flex-col items-center">
                               <div className="text-xs text-muted-foreground mb-1">{option.label}</div>
-                              <div className={`text-lg font-bold ${showBlurredOdds ? 'blur-sm select-none' : 'text-primary'}`}>{showBlurredOdds ? '***' : option.odds}</div>
+                              <div className="text-lg font-bold text-primary">{option.odds}</div>
                               {canBet ? (
                                 <div className="w-full mt-2 space-y-2">
                                   <Input
@@ -486,7 +470,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, showBlurredOdds = fals
                               ) : (
                                 <div className="text-center py-2">
                                   <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                                  <div className="text-xs text-muted-foreground">{user ? 'Pay to bet and get odds' : 'Login & Pay to Bet'}</div>
+                                  <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
                                 </div>
                               )}
                             </div>

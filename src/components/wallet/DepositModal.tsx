@@ -16,7 +16,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const { updateWallet } = useAuth();
+  const { updateWallet, user } = useAuth();
 
   const handleDeposit = async () => {
     const depositAmount = parseFloat(amount);
@@ -51,41 +51,21 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('paypal-payment', {
-        body: {
-          amount: depositAmount * 100, // Convert to cents for PayPal
-          type: 'wallet_deposit',
-          description: `Wallet Deposit - KSH ${depositAmount}`,
-          phoneNumber: phoneNumber
-        }
-      });
+      // For demo purposes, directly update wallet balance
+      // In production, this would integrate with a payment gateway
+      await updateWallet(depositAmount);
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Store payment info for verification
-      localStorage.setItem('pending_payment', JSON.stringify({
-        orderTrackingId: data.order_tracking_id,
-        userId: data.user_id,
-        amount: depositAmount * 100, // Store in cents
-        type: 'wallet_deposit'
-      }));
-
-      // Insert transaction record for deposit
+      // Add transaction record
       await supabase.from('transactions').insert({
-        user_id: data.user_id,
+        user_id: user?.id,
         type: 'deposit',
         amount: depositAmount,
-        description: `Wallet deposit via PayPal`
+        description: `Wallet deposit via M-Pesa (${phoneNumber})`
       });
 
-      // Open PayPal payment page in new tab
-      window.open(data.payment_url, '_blank');
-      
       toast({
-        title: "Payment Initiated",
-        description: `Complete your KSH ${depositAmount} deposit with PayPal`,
+        title: "Deposit Successful",
+        description: `KSH ${depositAmount} has been added to your wallet`,
         variant: "default",
       });
       
@@ -94,7 +74,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       console.error('Deposit error:', error);
       toast({
         title: "Deposit Failed",
-        description: error instanceof Error ? error.message : "Failed to initiate deposit",
+        description: error instanceof Error ? error.message : "Failed to process deposit",
         variant: "destructive",
       });
     } finally {

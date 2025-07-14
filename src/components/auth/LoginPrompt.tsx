@@ -17,7 +17,7 @@ export const LoginPrompt: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Create an account or login to access today's sure odds and place bets
+            Create an account or login to place bets and manage your wallet.
           </p>
           
           <div className="space-y-3">

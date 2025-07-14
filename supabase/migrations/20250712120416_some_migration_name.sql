@@ -252,6 +252,31 @@ CREATE TRIGGER update_games_updated_at
   BEFORE UPDATE ON public.games
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Function: credit_wallet_on_bet_win
+CREATE OR REPLACE FUNCTION public.credit_wallet_on_bet_win()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only act if status changed to 'won' and was not 'won' before
+  IF NEW.status = 'won' AND OLD.status IS DISTINCT FROM 'won' THEN
+    -- Credit the user's wallet with potential winnings
+    UPDATE public.profiles
+      SET wallet_balance = wallet_balance + NEW.potential_winnings
+      WHERE id = NEW.user_id;
+    -- Insert a transaction record
+    INSERT INTO public.transactions (user_id, type, amount, description)
+      VALUES (NEW.user_id, 'bet_won', NEW.potential_winnings, 'Bet won payout');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger: credit_wallet_on_bet_win
+CREATE TRIGGER credit_wallet_on_bet_win
+AFTER UPDATE OF status ON public.bets
+FOR EACH ROW
+WHEN (NEW.status = 'won' AND OLD.status IS DISTINCT FROM 'won')
+EXECUTE FUNCTION public.credit_wallet_on_bet_win();
+
 -- Insert sample data
 INSERT INTO public.leagues (name) VALUES 
   ('Premier League'),

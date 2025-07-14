@@ -10,7 +10,6 @@ interface User {
   fullName: string;
   walletBalance: number;
   isAdmin: boolean;
-  dailyAccessGrantedUntil?: string;
 }
 
 interface AuthContextType {
@@ -19,8 +18,6 @@ interface AuthContextType {
   signup: (fullName: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateWallet: (amount: number) => void;
-  grantDailyAccess: () => void;
-  hasDailyAccess: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -62,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fullName: profile.full_name,
           walletBalance: Number(profile.wallet_balance),
           isAdmin,
-          dailyAccessGrantedUntil: profile.daily_access_granted_until
         };
         console.log('User object:', userObj); // DEBUG
         return userObj;
@@ -187,49 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const grantDailyAccess = async () => {
-    if (user) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      const newBalance = user.walletBalance - 500;
-      
-      // Update in database
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          daily_access_granted_until: tomorrow.toISOString(),
-          wallet_balance: newBalance
-        })
-        .eq('id', user.id);
-
-      if (!error) {
-        // Update local state
-        setUser({ 
-          ...user, 
-          dailyAccessGrantedUntil: tomorrow.toISOString(),
-          walletBalance: newBalance
-        });
-        
-        // Add transaction record
-        await supabase
-          .from('transactions')
-          .insert({
-            user_id: user.id,
-            type: 'subscription',
-            amount: 500,
-            description: 'Daily subscription fee'
-          });
-      }
-    }
-  };
-
-  const hasDailyAccess = (): boolean => {
-    if (!user?.dailyAccessGrantedUntil) return false;
-    return new Date() < new Date(user.dailyAccessGrantedUntil);
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
@@ -244,9 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       signup, 
       logout, 
-      updateWallet, 
-      grantDailyAccess, 
-      hasDailyAccess 
+      updateWallet 
     }}>
       {children}
     </AuthContext.Provider>

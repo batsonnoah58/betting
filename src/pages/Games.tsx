@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '.
 import { Header } from '../components/layout/Header';
 import { WalletSection } from '../components/wallet/WalletSection';
 import { useAuth } from '../components/AuthGuard';
-import { DailySubscriptionModal } from '../components/subscription/DailySubscriptionModal';
 
 interface Game {
   id: number;
@@ -35,8 +34,7 @@ const Games: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const { user, hasDailyAccess } = useAuth();
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
 
   // Fetch transactions for the user
@@ -115,19 +113,6 @@ const Games: React.FC = () => {
       <div className="max-w-5xl mx-auto py-8 space-y-6">
         {/* Wallet Section */}
         {user && <WalletSection />}
-
-        {/* Daily Access Prompt */}
-        {user && !hasDailyAccess() && (
-          <Card className="bg-warning/10 border border-warning rounded p-4 mb-6 text-center">
-            <CardContent>
-              <p className="mb-2 font-semibold">Pay KSH 500 to unlock today's premium odds and betting!</p>
-              <Button onClick={() => setShowSubscriptionModal(true)}>Pay KSH 500</Button>
-            </CardContent>
-          </Card>
-        )}
-        {showSubscriptionModal && (
-          <DailySubscriptionModal onClose={() => setShowSubscriptionModal(false)} />
-        )}
 
         {/* Transaction History */}
         {user && (
@@ -272,7 +257,6 @@ const Games: React.FC = () => {
                     status: selectedGame.status,
                     confidence: selectedGame.confidence,
                   }}
-                  showBlurredOdds={user && !hasDailyAccess()}
                 />
               )}
               <DialogClose asChild>
