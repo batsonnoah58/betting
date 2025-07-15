@@ -7,6 +7,7 @@ import { Label } from '../ui/label';
 
 interface Team { id: number; name: string; }
 interface League { id: number; name: string; }
+// Extend Game interface for new fields
 interface Game {
   id: number;
   home_team_id: number;
@@ -15,6 +16,11 @@ interface Game {
   kick_off_time: string;
   result: string;
   status: string;
+  result_type?: string;
+  score_home_half?: number;
+  score_away_half?: number;
+  score_home_full?: number;
+  score_away_full?: number;
 }
 
 export const AdminResultsManager: React.FC = () => {
@@ -66,6 +72,11 @@ export const AdminResultsManager: React.FC = () => {
     setForm({
       id: game.id,
       result: game.result || 'pending',
+      result_type: game.result_type || 'full_time',
+      score_home_half: game.score_home_half !== undefined && game.score_home_half !== null ? String(game.score_home_half) : '',
+      score_away_half: game.score_away_half !== undefined && game.score_away_half !== null ? String(game.score_away_half) : '',
+      score_home_full: game.score_home_full !== undefined && game.score_home_full !== null ? String(game.score_home_full) : '',
+      score_away_full: game.score_away_full !== undefined && game.score_away_full !== null ? String(game.score_away_full) : '',
     });
     setFormError(null);
     setShowEdit(true);
@@ -79,6 +90,11 @@ export const AdminResultsManager: React.FC = () => {
     try {
       const { error } = await supabase.from('games').update({
         result: form.result as 'home_win' | 'draw' | 'away_win' | 'pending',
+        result_type: form.result_type,
+        score_home_half: form.score_home_half !== '' ? Number(form.score_home_half) : null,
+        score_away_half: form.score_away_half !== '' ? Number(form.score_away_half) : null,
+        score_home_full: form.score_home_full !== '' ? Number(form.score_home_full) : null,
+        score_away_full: form.score_away_full !== '' ? Number(form.score_away_full) : null,
       }).eq('id', selectedGame.id);
       if (error) throw error;
       setShowEdit(false);
@@ -91,7 +107,7 @@ export const AdminResultsManager: React.FC = () => {
   };
 
   // Form field change
-  const handleFormChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -172,6 +188,33 @@ export const AdminResultsManager: React.FC = () => {
               <Label>Game</Label>
               <div className="p-3 bg-muted rounded">
                 {selectedGame?.home_team?.name} vs {selectedGame?.away_team?.name}
+              </div>
+            </div>
+            <div>
+              <Label>Result Type</Label>
+              <select name="result_type" value={form.result_type || 'full_time'} onChange={handleFormChange} className="w-full border rounded p-2">
+                <option value="full_time">Full Time</option>
+                <option value="half_time">Half Time</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Home Score (Half Time)</Label>
+                <input name="score_home_half" type="number" min="0" value={form.score_home_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+              </div>
+              <div>
+                <Label>Away Score (Half Time)</Label>
+                <input name="score_away_half" type="number" min="0" value={form.score_away_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>Home Score (Full Time)</Label>
+                <input name="score_home_full" type="number" min="0" value={form.score_home_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+              </div>
+              <div>
+                <Label>Away Score (Full Time)</Label>
+                <input name="score_away_full" type="number" min="0" value={form.score_away_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
               </div>
             </div>
             <div>

@@ -16,7 +16,8 @@ type PaymentMethod = 'mpesa' | 'paypal';
 export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa');
+  // Only allow PayPal as payment method
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paypal');
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -158,57 +159,49 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
             <span>Deposit Funds</span>
           </DialogTitle>
           <DialogDescription>
-            Add money to your wallet using M-Pesa or PayPal. Minimum deposit is KES 100.
+            Add money to your wallet using PayPal. Minimum deposit is KES 100.
           </DialogDescription>
         </DialogHeader>
-        
         <div className="space-y-4">
+          <div className="bg-yellow-100 text-yellow-800 p-3 rounded text-sm flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            M-Pesa is temporarily unavailable. Please use PayPal to deposit funds.
+          </div>
           {status === 'success' ? (
             <div className="text-center py-6">
               <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {paymentMethod === 'paypal' ? 'PayPal Payment Initiated!' : 'STK Push Sent!'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {paymentMethod === 'paypal' 
-                  ? 'Please complete the payment in the new window that opened.'
-                  : 'Please check your phone and enter your M-Pesa PIN to complete the deposit.'
-                }
-              </p>
+              <h3 className="text-lg font-semibold mb-2">PayPal Payment Initiated!</h3>
+              <p className="text-sm text-muted-foreground">Please complete the payment in the new window that opened.</p>
             </div>
           ) : (
             <>
-              {/* Payment Method Selection */}
+              {/* Payment Method Selection - Only PayPal enabled */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Payment Method</label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
-                    variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('mpesa')}
-                    className="flex items-center space-x-2"
-                    disabled={isProcessing}
+                    variant="outline"
+                    className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
+                    disabled
                   >
                     <Smartphone className="h-4 w-4" />
                     <span>M-Pesa</span>
                   </Button>
                   <Button
                     type="button"
-                    variant={paymentMethod === 'paypal' ? 'default' : 'outline'}
-                    onClick={() => setPaymentMethod('paypal')}
+                    variant="default"
                     className="flex items-center space-x-2"
-                    disabled={isProcessing}
+                    disabled
                   >
                     <CreditCard className="h-4 w-4" />
                     <span>PayPal</span>
                   </Button>
                 </div>
               </div>
-
+              {/* Amount input */}
               <div className="space-y-2">
-                <label htmlFor="amount" className="text-sm font-medium">
-                  Amount (KES)
-                </label>
+                <label htmlFor="amount" className="text-sm font-medium">Amount (KES)</label>
                 <Input
                   id="amount"
                   type="number"
@@ -220,31 +213,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                   className="h-10"
                   disabled={isProcessing}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Minimum: KES 100 | Maximum: KES 100,000
-                </p>
+                <p className="text-xs text-muted-foreground">Minimum: KES 100 | Maximum: KES 100,000</p>
               </div>
-
-              {paymentMethod === 'mpesa' && (
-                <div className="space-y-2">
-                  <label htmlFor="phone" className="text-sm font-medium">
-                    M-Pesa Phone Number
-                  </label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="254700000000"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="h-10"
-                    disabled={isProcessing}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter your M-Pesa registered phone number
-                  </p>
-                </div>
-              )}
-
               {status === 'error' && errorMessage && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                   <div className="flex items-center space-x-2">
@@ -253,7 +223,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                   </div>
                 </div>
               )}
-
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <Button 
                   variant="outline" 
@@ -265,13 +234,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                 </Button>
                 <Button 
                   onClick={handleDeposit}
-                  disabled={
-                    !amount || 
-                    parseFloat(amount) < 100 || 
-                    parseFloat(amount) > 100000 || 
-                    isProcessing ||
-                    (paymentMethod === 'mpesa' && !phoneNumber)
-                  }
+                  disabled={!amount || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
                   className="flex-1"
                 >
                   {isProcessing ? (
@@ -284,33 +247,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                   )}
                 </Button>
               </div>
-
               <div className="bg-muted/50 p-3 rounded-lg">
                 <div className="flex items-start space-x-2">
-                  {paymentMethod === 'mpesa' ? (
-                    <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  )}
+                  <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div className="text-xs text-muted-foreground">
-                    <div className="font-medium mb-1">
-                      {paymentMethod === 'mpesa' ? 'M-Pesa Payment:' : 'PayPal Payment:'}
-                    </div>
+                    <div className="font-medium mb-1">PayPal Payment:</div>
                     <ul className="space-y-1 list-disc list-inside">
-                      {paymentMethod === 'mpesa' ? (
-                        <>
-                          <li>Enter amount and phone number</li>
-                          <li>Click "Deposit" to receive STK Push</li>
-                          <li>Enter your M-Pesa PIN when prompted</li>
-                          <li>Funds will be added to your wallet instantly</li>
-                        </>
-                      ) : (
-                        <>
-                          <li>Enter amount and click "Deposit"</li>
-                          <li>Complete payment in PayPal window</li>
-                          <li>Funds will be added to your wallet instantly</li>
-                        </>
-                      )}
+                      <li>Enter amount and click "Deposit"</li>
+                      <li>Complete payment in PayPal window</li>
+                      <li>Funds will be added to your wallet instantly</li>
                     </ul>
                   </div>
                 </div>

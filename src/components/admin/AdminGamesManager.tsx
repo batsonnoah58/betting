@@ -1,3 +1,11 @@
+/*
+AdminGamesManager Usage Guide:
+- View all games and expand to manage markets and market options for each game.
+- Add, edit, or delete markets (e.g., '1st Half - Total', '1st Goal', 'Multigoals').
+- Add, edit, or delete market options and odds for each market.
+- All changes are live and update the database via Supabase.
+- Use the admin dashboard link labeled 'Manage Markets & Odds' to access this tool.
+*/
 import React, { useEffect, useState } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 import { Button } from '../ui/button';
@@ -272,7 +280,10 @@ export const AdminGamesManager: React.FC = () => {
     setMarketForm((prev) => ({ ...prev, [name]: value }));
   };
   const handleMarketSubmit = async () => {
-    if (!marketForm.game_id || !marketForm.name || !marketForm.type) return;
+    if (!marketForm.game_id || !marketForm.name || !marketForm.type) {
+      setFormError('Name and type are required');
+      return;
+    }
     try {
       if (marketDialogMode === 'add') {
         const { error } = await supabase.from('markets').insert({
@@ -330,7 +341,10 @@ export const AdminGamesManager: React.FC = () => {
     setOptionForm((prev) => ({ ...prev, [name]: value }));
   };
   const handleOptionSubmit = async () => {
-    if (!optionForm.market_id || !optionForm.label || !optionForm.odds) return;
+    if (!optionForm.market_id || !optionForm.label || isNaN(Number(optionForm.odds))) {
+      setFormError('Label and valid odds are required');
+      return;
+    }
     try {
       if (optionDialogMode === 'add') {
         const { error } = await supabase.from('market_options').insert({

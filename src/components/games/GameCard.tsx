@@ -247,12 +247,21 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
   // Extract unique market types for filter dropdown
   const uniqueMarketTypes = Array.from(new Set(markets.map((m) => m.type)));
 
-  // Group markets by type (category)
-  const groupedMarkets: Record<string, Market[]> = {};
+  // Group markets by name for display
+  const groupedMarkets: Record<string, { market: Market; options: MarketOption[] }> = {};
   markets.forEach((market) => {
-    if (!groupedMarkets[market.type]) groupedMarkets[market.type] = [];
-    groupedMarkets[market.type].push(market);
+    groupedMarkets[market.name] = {
+      market,
+      options: marketOptions.filter((opt) => opt.market_id === market.id),
+    };
   });
+
+  // Define the order and display names for the main markets
+  const mainMarketOrder = [
+    '1st Half - Total',
+    '1st Goal',
+    'Multigoals',
+  ];
 
   // Apply market type filter
   let filteredMarkets = marketTypeFilter === 'all' ? markets : markets.filter((m) => m.type === marketTypeFilter);
@@ -277,8 +286,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const canBet = !!user;
 
   return (
-    <Card className="shadow-betting hover:shadow-glow transition-all duration-300 border border-primary/10">
-      <CardContent className="p-4 sm:p-6">
+    <Card className="mb-4 shadow-betting">
+      <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-2 sm:gap-0">
           <div className="flex items-center space-x-2">
             <Badge className={confidence.className}>
@@ -467,53 +476,45 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             </div>
             {/* Grouped by type */}
             {Object.keys(groupedMarkets).map((type) => (
-              (marketTypeFilter === 'all' || marketTypeFilter === type) && groupedMarkets[type].length > 0 && (
+              (marketTypeFilter === 'all' || marketTypeFilter === type) && groupedMarkets[type].options.length > 0 && (
                 <div key={type} className="mb-6">
                   <div className="font-semibold text-primary mb-3 text-sm">{type}</div>
-                  {groupedMarkets[type]
+                  {groupedMarkets[type].options
                     .sort((a, b) => {
-                      if (marketSort === 'name') return a.name.localeCompare(b.name);
-                      if (marketSort === 'type') return a.type.localeCompare(b.type);
+                      if (marketSort === 'name') return a.label.localeCompare(b.label);
+                      if (marketSort === 'type') return a.label.localeCompare(b.label);
                       return 0;
                     })
-                    .map((market) => (
-                      <div key={market.id} className="mb-4 p-3 rounded-lg border border-primary/10 bg-muted">
-                        <div className="font-semibold mb-3 text-sm">{market.name} <span className="text-xs text-muted-foreground">({market.type})</span></div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
-                          {filterAndSortOptions(market.id).map((option) => (
-                            <div key={option.id} className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 flex flex-col items-center">
-                              <div className="text-xs text-muted-foreground mb-1 text-center">{option.label}</div>
-                              <div className="text-base sm:text-lg font-bold text-primary">{option.odds}</div>
-                              {canBet ? (
-                                <div className="w-full mt-2 space-y-2">
-                                  <Input
-                                    type="number"
-                                    placeholder="Stake"
-                                    value={marketStakes[option.id] || ''}
-                                    onChange={(e) => setMarketStakes((prev) => ({ ...prev, [option.id]: e.target.value }))}
-                                    className="text-xs h-8 sm:h-9"
-                                    min="10"
-                                    max={user?.walletBalance || 0}
-                                  />
-                                  <Button
-                                    size="sm"
-                                    variant="betting"
-                                    onClick={() => handleMarketOptionBet(option)}
-                                    disabled={!marketStakes[option.id] || bettingOnOption === option.id}
-                                    className="w-full text-xs h-8 sm:h-9"
-                                  >
-                                    {bettingOnOption === option.id ? 'Placing...' : 'Bet'}
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="text-center py-2">
-                                  <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                                  <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                    .map((option) => (
+                      <div key={option.id} className="mb-4 p-3 rounded-lg border border-primary/10 bg-muted">
+                        <div className="font-semibold mb-3 text-sm">{option.label} <span className="text-xs text-muted-foreground">({option.odds})</span></div>
+                        {canBet ? (
+                          <div className="w-full mt-2 space-y-2">
+                            <Input
+                              type="number"
+                              placeholder="Stake"
+                              value={marketStakes[option.id] || ''}
+                              onChange={(e) => setMarketStakes((prev) => ({ ...prev, [option.id]: e.target.value }))}
+                              className="text-xs h-8 sm:h-9"
+                              min="10"
+                              max={user?.walletBalance || 0}
+                            />
+                            <Button
+                              size="sm"
+                              variant="betting"
+                              onClick={() => handleMarketOptionBet(option)}
+                              disabled={!marketStakes[option.id] || bettingOnOption === option.id}
+                              className="w-full text-xs h-8 sm:h-9"
+                            >
+                              {bettingOnOption === option.id ? 'Placing...' : 'Bet'}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="text-center py-2">
+                            <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
+                            <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
+                          </div>
+                        )}
                       </div>
                     ))}
                 </div>
@@ -521,6 +522,32 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
             ))}
           </div>
         )}
+
+        {/* Grouped Markets Display */}
+        <div className="space-y-6 mt-4">
+          {mainMarketOrder.map((marketName) => {
+            const group = groupedMarkets[marketName];
+            if (!group) return null;
+            return (
+              <div key={marketName} className="bg-muted/10 rounded-lg p-3">
+                <div className="flex items-center mb-2">
+                  <span className="font-semibold text-base mr-2">{marketName}</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {group.options.map((option) => (
+                    <div
+                      key={option.id}
+                      className="flex flex-col items-center justify-center bg-card border border-border rounded-lg p-2 text-center shadow-sm"
+                    >
+                      <span className="text-xs text-muted-foreground mb-1">{option.label}</span>
+                      <span className="font-bold text-lg">{Number(option.odds).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
         <div className="mt-4 pt-3 border-t border-border">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-muted-foreground gap-2 sm:gap-0">
