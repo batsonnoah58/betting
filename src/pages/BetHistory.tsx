@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../components/AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '../components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Ghost } from 'lucide-react';
+import { Tabs } from '../components/ui/tabs';
 
 interface Bet {
   id: number;
@@ -41,10 +42,12 @@ const BetHistory: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'settled'>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<'recent' | 'stake' | 'winnings'>('recent');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     const fetchBets = async () => {
+      setLoading(true);
       const { data: betsData, error } = await supabase
         .from('bets')
         .select('*')
@@ -66,6 +69,7 @@ const BetHistory: React.FC = () => {
           .in('id', gameIds);
         setGames(Object.fromEntries((gamesData || []).map((g) => [g.id, g])));
       }
+      setLoading(false);
     };
     fetchBets();
   }, [user]);
@@ -97,12 +101,12 @@ const BetHistory: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
-      <Card>
+      <Card className="bet-history-section bg-card border border-border text-foreground">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
             <div className="font-bold text-lg">My Bet History</div>
             <div className="flex gap-2 items-center">
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'active' | 'settled')}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -118,7 +122,7 @@ const BetHistory: React.FC = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-40"
               />
-              <Select value={sort} onValueChange={(v) => setSort(v as any)}>
+              <Select value={sort} onValueChange={(v) => setSort(v as 'recent' | 'stake' | 'winnings')}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
@@ -130,73 +134,80 @@ const BetHistory: React.FC = () => {
               </Select>
             </div>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Game</TableHead>
-                <TableHead>Bet Type</TableHead>
-                <TableHead>Stake</TableHead>
-                <TableHead>Odds</TableHead>
-                <TableHead>Potential</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading bets...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Ghost className="h-8 w-8 text-muted-foreground mb-2" />
-                      <div className="font-semibold">No betting history found</div>
-                      <div className="text-sm text-muted-foreground mb-2">You haven't placed any bets yet.</div>
-                      <Button asChild variant="gradient">
-                        <a href="/">Start Betting</a>
-                      </Button>
-                    </div>
-                  </TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Game</TableHead>
+                  <TableHead>Bet Type</TableHead>
+                  <TableHead>Stake</TableHead>
+                  <TableHead>Odds</TableHead>
+                  <TableHead>Potential</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ) : (
-                filtered.map((bet) => {
-                  const game = games[bet.game_id];
-                  return (
-                    <TableRow key={bet.id}>
-                      <TableCell>{new Date(bet.placed_at).toLocaleString()}</TableCell>
-                      <TableCell>
-                        {game ? (
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium">{game.home_team?.name || `Team ${game.home_team_id}`}</span>
-                            <span className="text-muted-foreground">vs</span>
-                            <span className="text-sm font-medium">{game.away_team?.name || `Team ${game.away_team_id}`}</span>
-                            {game.league && (
-                              <Badge variant="outline" className="text-xs">
-                                {game.league.name}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          `Game ${bet.game_id}`
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {bet.bet_on.replace('_', ' ').toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>KES {bet.stake}</TableCell>
-                      <TableCell>{bet.odds}</TableCell>
-                      <TableCell>KES {bet.potential_winnings}</TableCell>
-                      <TableCell>
-                        <Badge variant={bet.status === 'active' ? 'default' : bet.status === 'won' ? 'secondary' : 'destructive'}>
-                          {bet.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Ghost className="h-8 w-8 text-muted-foreground mb-2" />
+                        <div className="font-semibold">No betting history found</div>
+                        <div className="text-sm text-muted-foreground mb-2">You haven't placed any bets yet.</div>
+                        <Button asChild variant="gradient">
+                          <a href="/">Start Betting</a>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((bet) => {
+                    const game = games[bet.game_id];
+                    return (
+                      <TableRow key={bet.id}>
+                        <TableCell>{new Date(bet.placed_at).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {game ? (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium">{game.home_team?.name || `Team ${game.home_team_id}`}</span>
+                              <span className="text-muted-foreground">vs</span>
+                              <span className="text-sm font-medium">{game.away_team?.name || `Team ${game.away_team_id}`}</span>
+                              {game.league && (
+                                <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-border">
+                                  {game.league.name}
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            `Game ${bet.game_id}`
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-border">
+                            {bet.bet_on.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>KES {bet.stake}</TableCell>
+                        <TableCell>{bet.odds}</TableCell>
+                        <TableCell>KES {bet.potential_winnings}</TableCell>
+                        <TableCell>
+                          <Badge variant={bet.status === 'active' ? 'default' : bet.status === 'won' ? 'secondary' : 'destructive'} className="bg-muted text-foreground border-border">
+                            {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

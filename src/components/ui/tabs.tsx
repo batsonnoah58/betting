@@ -50,4 +50,24 @@ const TabsContent = React.forwardRef<
 ))
 TabsContent.displayName = TabsPrimitive.Content.displayName
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+interface CustomTabsProps {
+  tabs: { label: string; value: string }[];
+  activeTab: string;
+  onTabChange: (value: string) => void;
+  children?: React.ReactNode;
+}
+
+const CustomTabs: React.FC<CustomTabsProps> = ({ tabs, activeTab, onTabChange, children }) => (
+  <Tabs value={activeTab} onValueChange={onTabChange}>
+    <TabsList>
+      {tabs.map(tab => (
+        <TabsTrigger key={tab.value} value={tab.value}>
+          {tab.label}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+    {children}
+  </Tabs>
+);
+
+export { CustomTabs, Tabs, TabsList, TabsTrigger, TabsContent }

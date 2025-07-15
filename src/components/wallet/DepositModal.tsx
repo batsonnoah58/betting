@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -66,7 +66,6 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       }
 
       let response;
-      let result;
 
       if (paymentMethod === 'mpesa') {
         // Call M-Pesa deposit function
@@ -99,15 +98,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
         });
       }
 
-      result = await response.json();
+      const paymentResult = await response.json();
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to initiate payment');
+      if (!response.ok || !paymentResult.success) {
+        throw new Error(paymentResult.error || 'Failed to initiate payment');
       }
 
-      if (paymentMethod === 'paypal' && result.approval_url) {
+      if (paymentMethod === 'paypal' && paymentResult.approval_url) {
         // Redirect to PayPal for payment
-        window.open(result.approval_url, '_blank');
+        window.open(paymentResult.approval_url, '_blank');
         setStatus('success');
         toast.success("PayPal payment initiated. Please complete the payment in the new window.");
       } else {
@@ -117,7 +116,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       
       // Close modal after a delay to show success message
       setTimeout(() => {
-        onClose();
+      onClose();
         refreshUser(); // Refresh user data
       }, 3000);
 
@@ -202,14 +201,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                 </div>
               </div>
               {/* Amount input */}
-              <div className="space-y-2">
+          <div className="space-y-2">
                 <label htmlFor="amount" className="text-sm font-medium">Amount (KES)</label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+            <Input
+              id="amount"
+              type="number"
+              placeholder="Enter amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
                   min="100"
                   max="100000"
                   className="h-10"
@@ -222,23 +221,23 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                   <div className="flex items-center space-x-2">
                     <AlertCircle className="h-4 w-4 text-destructive" />
                     <p className="text-sm text-destructive">{errorMessage}</p>
-                  </div>
+          </div>
                 </div>
               )}
               <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleClose}
                   className="flex-1"
                   disabled={isProcessing}
                 >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleDeposit}
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeposit}
                   disabled={!amount || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
-                  className="flex-1"
-                >
+              className="flex-1"
+            >
                   {isProcessing ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -247,8 +246,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                   ) : (
                     `Deposit ${amount ? formatCurrency(amount) : ''}`
                   )}
-                </Button>
-              </div>
+            </Button>
+          </div>
               <div className="bg-muted/50 p-3 rounded-lg">
                 <div className="flex items-start space-x-2">
                   <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />

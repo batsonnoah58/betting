@@ -1,10 +1,27 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// ENVIRONMENT VARIABLES REQUIRED:
+// PAYPAL_CLIENT_ID - Your PayPal REST API client ID (live)
+// PAYPAL_CLIENT_SECRET - Your PayPal REST API secret (live)
+// PAYPAL_ENVIRONMENT - Set to 'live' for production, 'sandbox' for testing (default: 'live')
+
+type EnvVars = {
+  SUPABASE_URL?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  PAYPAL_CLIENT_ID?: string;
+  PAYPAL_CLIENT_SECRET?: string;
+  PAYPAL_ENVIRONMENT?: string;
+};
+
+function getEnv<K extends keyof EnvVars>(key: K): EnvVars[K] {
+  return (globalThis.env?.[key] ?? undefined) as EnvVars[K];
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -13,8 +30,8 @@ serve(async (req) => {
 
   try {
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      getEnv('SUPABASE_URL') ?? "",
+      getEnv('SUPABASE_SERVICE_ROLE_KEY') ?? "",
       { auth: { persistSession: false } }
     );
 
@@ -42,9 +59,9 @@ serve(async (req) => {
 
     // Load PayPal credentials from environment variables
     // For local dev, use a .env file. For production, set as Supabase Edge Function secrets.
-    const paypalClientId = Deno.env.get("PAYPAL_CLIENT_ID");
-    const paypalClientSecret = Deno.env.get("PAYPAL_SECRET");
-    const environment = Deno.env.get("PAYPAL_ENVIRONMENT") || "sandbox";
+    const paypalClientId = getEnv('PAYPAL_CLIENT_ID') ?? "";
+    const paypalClientSecret = getEnv('PAYPAL_CLIENT_SECRET') ?? "";
+    const environment = getEnv('PAYPAL_ENVIRONMENT') ?? "live";
     
     if (!paypalClientId || !paypalClientSecret) {
       throw new Error("We are experiencing an issue with PayPal payments and are working to fix it as soon as possible. Please try again later or use another payment method if available.");
@@ -76,10 +93,10 @@ serve(async (req) => {
       intent: "CAPTURE",
       purchase_units: [
         {
-          amount: {
+        amount: {
             currency_code: "KES",
             value: amount.toString(),
-          },
+        },
           description: `BetWise deposit for user ${userId}`,
           custom_id: userId,
         },
@@ -110,7 +127,7 @@ serve(async (req) => {
     }
 
     const orderResult = await orderResponse.json();
-    
+
     if (orderResult.status !== "CREATED") {
       throw new Error(`PayPal order creation failed: ${orderResult.status}`);
     }
@@ -131,7 +148,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       order_id: orderResult.id,
-      approval_url: orderResult.links.find((link: any) => link.rel === "approve")?.href,
+      approval_url: (orderResult.links as PayPalLink[]).find((link) => link.rel === "approve")?.href,
       user_id: userId,
       message: "PayPal payment initiated. Please complete the payment to add funds to your wallet."
     }), {
@@ -149,4 +166,10 @@ serve(async (req) => {
       status: 500,
     });
   }
-}); 
+});
+
+interface PayPalLink {
+  href: string;
+  rel: string;
+  method: string;
+}

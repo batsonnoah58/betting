@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
 import { useToast } from '../ui/use-toast';
 
-interface Team { id: number; name: string; }
+interface Team { id: number; name: string; logo?: string; }
 interface League { id: number; name: string; }
 interface Game {
   id: number;
@@ -44,8 +44,18 @@ interface MarketOption {
   created_at: string;
 }
 
+interface GameWithRelations extends Game {
+  home_team: Team;
+  away_team: Team;
+  league: League;
+}
+
+function isErrorWithMessage(err: unknown): err is { message: string } {
+  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
+}
+
 export const AdminGamesManager: React.FC = () => {
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<GameWithRelations[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,12 +65,14 @@ export const AdminGamesManager: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<any | null>(null);
+  const [selectedGame, setSelectedGame] = useState<GameWithRelations | null>(null);
 
   // Form state
   const [form, setForm] = useState<Partial<Game>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [marketFormError, setMarketFormError] = useState<string | null>(null);
+  const [optionFormError, setOptionFormError] = useState<string | null>(null);
 
   // Expandable row state
   const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
@@ -119,8 +131,12 @@ export const AdminGamesManager: React.FC = () => {
         .select('id, name');
       if (leaguesError) throw leaguesError;
       setLeagues(leaguesData || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch data');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch data');
+      }
     } finally {
       setLoading(false);
     }
@@ -163,7 +179,7 @@ export const AdminGamesManager: React.FC = () => {
     setFormError(null);
     setShowAdd(true);
   };
-  const openEdit = (game: any) => {
+  const openEdit = (game: GameWithRelations) => {
     setSelectedGame(game);
     setForm({
       id: game.id,
@@ -179,7 +195,7 @@ export const AdminGamesManager: React.FC = () => {
     setFormError(null);
     setShowEdit(true);
   };
-  const openDelete = (game: any) => {
+  const openDelete = (game: GameWithRelations) => {
     setSelectedGame(game);
     setShowDelete(true);
   };
@@ -202,8 +218,12 @@ export const AdminGamesManager: React.FC = () => {
       if (error) throw error;
       setShowAdd(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to add game');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to add game');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -228,8 +248,12 @@ export const AdminGamesManager: React.FC = () => {
       if (error) throw error;
       setShowEdit(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to update game');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to update game');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -245,8 +269,12 @@ export const AdminGamesManager: React.FC = () => {
       if (error) throw error;
       setShowDelete(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to delete game');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to delete game');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -303,8 +331,12 @@ export const AdminGamesManager: React.FC = () => {
       }
       setShowMarketDialog(false);
       fetchMarketsForGame(marketForm.game_id as number);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setMarketFormError(err.message);
+      } else {
+        setMarketFormError('Failed to add/edit market');
+      }
     }
   };
   const handleDeleteMarket = async () => {
@@ -315,8 +347,12 @@ export const AdminGamesManager: React.FC = () => {
       toast({ title: 'Market deleted' });
       setShowDeleteMarket(false);
       fetchMarketsForGame(selectedMarket.game_id);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setMarketFormError(err.message);
+      } else {
+        setMarketFormError('Failed to delete market');
+      }
     }
   };
   // Option CRUD handlers
@@ -364,8 +400,12 @@ export const AdminGamesManager: React.FC = () => {
       }
       setShowOptionDialog(false);
       if (optionForm.market_id) fetchMarketsForGame(marketForm.game_id as number);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setOptionFormError(err.message);
+      } else {
+        setOptionFormError('Failed to add/edit option');
+      }
     }
   };
   const handleDeleteOption = async () => {
@@ -376,8 +416,12 @@ export const AdminGamesManager: React.FC = () => {
       toast({ title: 'Option deleted' });
       setShowDeleteOption(false);
       if (selectedOption.market_id) fetchMarketsForGame(marketForm.game_id as number);
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setOptionFormError(err.message);
+      } else {
+        setOptionFormError('Failed to delete option');
+      }
     }
   };
 
@@ -417,7 +461,7 @@ export const AdminGamesManager: React.FC = () => {
                 </TableRow>
               ) : (
                 games.map((game) => (
-                  <React.Fragment key={game.id}>
+                  <div key={game.id}>
                     <TableRow>
                       <TableCell>{game.id}</TableCell>
                       <TableCell>{game.home_team.logo ? <img src={game.home_team.logo} alt={game.home_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.home_team.name}</TableCell>
@@ -488,7 +532,7 @@ export const AdminGamesManager: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     )}
-                  </React.Fragment>
+                  </div>
                 ))
               )}
             </TableBody>

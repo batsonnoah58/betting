@@ -42,8 +42,8 @@ export const AdminLeaguesManager: React.FC = () => {
         .order('name', { ascending: true });
       if (leaguesError) throw leaguesError;
       setLeagues(leaguesData || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch leagues');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch leagues');
     } finally {
       setLoading(false);
     }
@@ -80,8 +80,8 @@ export const AdminLeaguesManager: React.FC = () => {
       if (error) throw error;
       setShowAdd(false);
       fetchLeagues();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to add league');
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Failed to add league');
     } finally {
       setFormLoading(false);
     }
@@ -99,8 +99,8 @@ export const AdminLeaguesManager: React.FC = () => {
       if (error) throw error;
       setShowEdit(false);
       fetchLeagues();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to update league');
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Failed to update league');
     } finally {
       setFormLoading(false);
     }
@@ -116,8 +116,8 @@ export const AdminLeaguesManager: React.FC = () => {
       if (error) throw error;
       setShowDelete(false);
       fetchLeagues();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to delete league');
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : 'Failed to delete league');
     } finally {
       setFormLoading(false);
     }
@@ -137,7 +137,10 @@ export const AdminLeaguesManager: React.FC = () => {
       </div>
       {error && <div className="text-destructive mb-2">{error}</div>}
       {loading ? (
-        <div className="text-center text-muted-foreground py-8">Loading leagues...</div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3 text-muted-foreground">Loading leagues...</span>
+        </div>
       ) : (
         <div className="overflow-x-auto w-full">
           <Table>
@@ -206,7 +209,16 @@ export const AdminLeaguesManager: React.FC = () => {
             {formError && <div className="text-destructive text-sm">{formError}</div>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save Changes'}</Button>
+              <Button type="submit" variant="gradient" disabled={formLoading} className="flex items-center justify-center">
+                {formLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                    Saving…
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -222,7 +234,16 @@ export const AdminLeaguesManager: React.FC = () => {
           {formError && <div className="text-destructive text-sm mb-2">{formError}</div>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
-            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading}>{formLoading ? 'Deleting...' : 'Delete'}</Button>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading} className="flex items-center justify-center">
+              {formLoading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                  Deleting…
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -3,12 +3,24 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+interface AuthFormFieldProps {
+  id: string;
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  icon?: React.ElementType;
+  required?: boolean;
+  children?: React.ReactNode;
+}
+
 // Reusable form field for auth forms
-export const AuthFormField = ({
+export const AuthFormField: React.FC<AuthFormFieldProps> = ({
   id,
   label,
   type = 'text',
@@ -18,7 +30,7 @@ export const AuthFormField = ({
   icon: Icon,
   required = false,
   children
-}: any) => (
+}) => (
   <div className="space-y-2">
     <Label htmlFor={id}>{label}</Label>
     <div className="relative">
@@ -71,33 +83,33 @@ export const LoginForm: React.FC = () => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <AuthFormField
-            id="email"
+                id="email"
             label="Email"
-            type="email"
+                type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="Enter your email"
+                placeholder="Enter your email"
             icon={Mail}
-            required
-          />
+                required
+              />
           
           <AuthFormField
-            id="password"
+                id="password"
             label="Password"
-            type={showPassword ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={e => setPassword(e.target.value)}
-            placeholder="Enter your password"
+                placeholder="Enter your password"
             icon={Lock}
-            required
+                required
           >
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
           </AuthFormField>
 
           {error && (

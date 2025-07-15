@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useGamesCache } from '@/hooks/useGamesCache';
+import { GameCardSkeleton } from '@/components/games/GameCardSkeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 import { Input } from '../components/ui/input';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { CustomTabs } from '../components/ui/tabs';
 import { GameCard } from '../components/games/GameCard';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '../components/ui/popover';
 import { format } from 'date-fns';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../components/ui/dialog';
-import { Header } from '../components/layout/Header';
+import Header from '../components/layout/Header';
 import { WalletSection } from '../components/wallet/WalletSection';
-import { useAuth } from '../components/AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
+import { BetslipDrawer } from '../components/betslip/BetslipDrawer';
 
 interface Game {
   id: number;
@@ -25,8 +28,18 @@ interface Game {
   confidence: string;
 }
 
+interface Transaction {
+  id: number;
+  user_id: string;
+  type: string;
+  amount: number;
+  description: string;
+  created_at: string;
+}
+
 const Games: React.FC = () => {
-  const [games, setGames] = useState<Game[]>([]);
+  const { games: cachedGames, loading, error, fetchGames } = useGamesCache();
+  const [games, setGames] = useState<Game[]>(cachedGames);
   const [leagues, setLeagues] = useState<string[]>([]);
   const [leagueFilter, setLeagueFilter] = useState('all');
   const [sort, setSort] = useState<'soonest' | 'latest'>('soonest');
@@ -35,7 +48,7 @@ const Games: React.FC = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch transactions for the user
@@ -54,41 +67,16 @@ const Games: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
-    const fetchGames = async () => {
-      const { data, error } = await supabase
-        .from('games')
-        .select(`
-          id, kick_off_time, status, confidence,
-          home_team:teams!games_home_team_id_fkey(id, name, logo),
-          away_team:teams!games_away_team_id_fkey(id, name, logo),
-          league:leagues(name),
-          odds_home, odds_draw, odds_away
-        `);
-      if (!error && data) {
-        setGames(
-          data.map((g: any) => ({
-            id: g.id,
-            home_team: g.home_team,
-            away_team: g.away_team,
-            league: g.league?.name || '',
-            kick_off_time: g.kick_off_time,
-            odds: { home: g.odds_home, draw: g.odds_draw, away: g.odds_away },
-            status: g.status,
-            confidence: g.confidence,
-          }))
-        );
-        setLeagues(Array.from(new Set(data.map((g: any) => g.league?.name).filter(Boolean))));
-      }
-    };
-    fetchGames();
+    // Update games from cache when it changes
+    setGames(cachedGames);
+  }, [cachedGames]);
+
+  useEffect(() => {
+    // Fetch more games when switching to live tab
     if (tab === 'live') {
-      interval = setInterval(fetchGames, 15000);
+      fetchGames();
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [tab]);
+  }, [tab, fetchGames]);
 
   // Filter and sort
   let filtered = games.filter((g) => g.status === tab);
@@ -123,6 +111,18 @@ const Games: React.FC = () => {
     <>
       <Header />
       <div className="max-w-5xl mx-auto py-8 space-y-6">
+        {loading && (
+          <div className="grid gap-6">
+            {Array(6).fill(0).map((_, i) => (
+              <GameCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+        {!loading && error && (
+          <div className="text-center text-destructive py-8">
+            Failed to load games. Please try again later.
+          </div>
+        )}
         {/* Wallet Section */}
         {user && <WalletSection />}
 
@@ -219,13 +219,15 @@ const Games: React.FC = () => {
                   </Select>
                 </div>
               </div>
-              <Tabs value={tab} onValueChange={(v) => setTab(v as 'upcoming' | 'live' | 'finished')} className="mb-6">
-                <TabsList>
-                  <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                  <TabsTrigger value="live">Live</TabsTrigger>
-                  <TabsTrigger value="finished">Finished</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <CustomTabs
+                tabs={[
+                  { label: 'Upcoming', value: 'upcoming' },
+                  { label: 'Live', value: 'live' },
+                  { label: 'Finished', value: 'finished' },
+                ]}
+                activeTab={tab}
+                onTabChange={(v) => setTab(v as 'upcoming' | 'live' | 'finished')}
+              />
               <div className="grid gap-6">
                 {filtered.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">No games found.</div>
@@ -284,6 +286,7 @@ const Games: React.FC = () => {
           </Dialog>
         </div>
       </div>
+      <BetslipDrawer />
     </>
   );
 };

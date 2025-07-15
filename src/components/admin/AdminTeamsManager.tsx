@@ -14,8 +14,16 @@ interface Team {
   logo: string | null;
 }
 
+interface TeamWithLeague extends Team {
+  league?: League;
+}
+
+function isErrorWithMessage(err: unknown): err is { message: string } {
+  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
+}
+
 export const AdminTeamsManager: React.FC = () => {
-  const [teams, setTeams] = useState<any[]>([]);
+  const [teams, setTeams] = useState<TeamWithLeague[]>([]);
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +32,7 @@ export const AdminTeamsManager: React.FC = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<any | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithLeague | null>(null);
 
   // Form state
   const [form, setForm] = useState<Partial<Team>>({});
@@ -58,8 +66,12 @@ export const AdminTeamsManager: React.FC = () => {
         .select('id, name');
       if (leaguesError) throw leaguesError;
       setLeagues(leaguesData || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch data');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch data');
+      }
     } finally {
       setLoading(false);
     }
@@ -71,7 +83,7 @@ export const AdminTeamsManager: React.FC = () => {
     setFormError(null);
     setShowAdd(true);
   };
-  const openEdit = (team: any) => {
+  const openEdit = (team: TeamWithLeague) => {
     setSelectedTeam(team);
     setForm({
       id: team.id,
@@ -82,7 +94,7 @@ export const AdminTeamsManager: React.FC = () => {
     setFormError(null);
     setShowEdit(true);
   };
-  const openDelete = (team: any) => {
+  const openDelete = (team: TeamWithLeague) => {
     setSelectedTeam(team);
     setShowDelete(true);
   };
@@ -100,8 +112,12 @@ export const AdminTeamsManager: React.FC = () => {
       if (error) throw error;
       setShowAdd(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to add team');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to add team');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -121,8 +137,12 @@ export const AdminTeamsManager: React.FC = () => {
       if (error) throw error;
       setShowEdit(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to update team');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to update team');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -138,8 +158,12 @@ export const AdminTeamsManager: React.FC = () => {
       if (error) throw error;
       setShowDelete(false);
       fetchAll();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to delete team');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to delete team');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -173,22 +197,20 @@ export const AdminTeamsManager: React.FC = () => {
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>League</TableHead>
-                <TableHead>Logo</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {teams.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">No teams yet.</TableCell>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">No teams yet.</TableCell>
                 </TableRow>
               ) : (
                 teams.map((team) => (
                   <TableRow key={team.id}>
                     <TableCell>{team.id}</TableCell>
                     <TableCell>{team.name}</TableCell>
-                    <TableCell>{team.league?.name}</TableCell>
-                    <TableCell>{team.logo || '⚽'}</TableCell>
+                    <TableCell>{team.league?.name || '-'}</TableCell>
                     <TableCell>
                       <Button size="sm" variant="outline" onClick={() => openEdit(team)} className="mr-2">Edit</Button>
                       <Button size="sm" variant="destructive" onClick={() => openDelete(team)}>Delete</Button>
@@ -261,8 +283,15 @@ export const AdminTeamsManager: React.FC = () => {
             {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>
-                {formLoading ? <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Processing...</span> : 'Save Changes'}
+              <Button type="submit" variant="gradient" disabled={formLoading} className="flex items-center justify-center">
+                {formLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                    Saving…
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -279,8 +308,15 @@ export const AdminTeamsManager: React.FC = () => {
           {formError && <div className="text-destructive text-sm mb-2">{formError}</div>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
-            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading}>
-              {formLoading ? <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Deleting...</span> : 'Delete'}
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading} className="flex items-center justify-center">
+              {formLoading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                  Deleting…
+                </>
+              ) : (
+                'Delete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

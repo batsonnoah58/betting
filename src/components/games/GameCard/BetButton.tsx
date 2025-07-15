@@ -17,7 +17,7 @@ export const BetButton: React.FC<BetButtonProps> = ({ odds, label, isSelected, o
       variant={isSelected ? 'success' : 'betting'}
       onClick={onClick}
       disabled={disabled || loading}
-      className={`w-full text-xs h-8 sm:h-9 ${isSelected ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}
+      className={`place-bet-btn w-full text-xs h-8 sm:h-9 ${isSelected ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}
     >
       {loading ? (
         <span className="flex items-center justify-center">

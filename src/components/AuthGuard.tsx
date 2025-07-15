@@ -1,108 +1,92 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { LoginForm } from './auth/LoginForm';
 import { SignupForm } from './auth/SignupForm';
 import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
+import { AuthContext, useAuth, User, AuthContextType } from '@/contexts/AuthContext';
 
-interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  walletBalance: number;
-  isAdmin: boolean;
-}
+// Move fetchUserProfile outside the component so it is stable and not a dependency
+async function fetchUserProfile(userId: string, session: Session | null) {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (fullName: string, email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  updateWallet: (amount: number) => void;
-  refreshUser: () => Promise<void>;
-}
+    // Only fetch roles for this user
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
 
-const AuthContext = createContext<AuthContextType | null>(null);
+    const isAdmin = roles?.some(r => r.role === 'admin') || false;
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    if (profile) {
+      const userObj = {
+        id: profile.id,
+        email: session?.user?.email || '',
+        fullName: profile.full_name,
+        walletBalance: Number(profile.wallet_balance),
+        isAdmin,
+      };
+      return userObj;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
   }
-  return context;
-};
+}
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUserId, setLastUserId] = useState<string | null>(null);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-
-      const isAdmin = roles?.some(r => r.role === 'admin') || false;
-
-      if (profile) {
-        const userObj = {
-          id: profile.id,
-          email: session?.user?.email || '',
-          fullName: profile.full_name,
-          walletBalance: Number(profile.wallet_balance),
-          isAdmin,
-        };
-        return userObj;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      return null;
-    }
-  };
-
+  // Set up auth state listener ONCE
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
-        setUser(null); // Clear user first
-        
-        // Defer async operations to prevent blocking
+        setUser(null);
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserProfile(session.user.id).then((userProfile) => {
-              setUser(userProfile);
-              setIsLoading(false);
-            });
-          }, 0);
+          fetchUserProfile(session.user.id, session).then((userProfile) => {
+            setUser(userProfile);
+            setLastUserId(session.user.id);
+            setIsLoading(false);
+          });
         } else {
           setIsLoading(false);
         }
       }
     );
-
-    // THEN check for existing session
+    // Check for existing session ONCE
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       if (session?.user) {
-        fetchUserProfile(session.user.id).then((userProfile) => {
+        fetchUserProfile(session.user.id, session).then((userProfile) => {
           setUser(userProfile);
+          setLastUserId(session.user.id);
           setIsLoading(false);
         });
       } else {
         setIsLoading(false);
       }
     });
-
     return () => subscription.unsubscribe();
-  }, []); // Remove session dependency to prevent recursion
+  }, []);
+
+  // Only fetch user profile if session.user.id changes
+  useEffect(() => {
+    if (session?.user && session.user.id !== lastUserId) {
+      fetchUserProfile(session.user.id, session).then((userProfile) => {
+        setUser(userProfile);
+        setLastUserId(session.user.id);
+      });
+    }
+  }, [session, lastUserId]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -183,9 +167,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async () => {
     if (session?.user) {
-      const userProfile = await fetchUserProfile(session.user.id);
+      const userProfile = await fetchUserProfile(session.user.id, session);
       setUser(userProfile);
-    }
+      }
   };
 
   if (isLoading) {
@@ -202,7 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       signup, 
       logout, 
-      updateWallet,
+      updateWallet, 
       refreshUser
     }}>
       {children}

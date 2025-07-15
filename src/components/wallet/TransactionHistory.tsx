@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../AuthGuard';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { History, TrendingUp, TrendingDown, Plus, Minus, DollarSign } from 'lucide-react';
@@ -18,13 +18,7 @@ export const TransactionHistory: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchTransactions();
-    }
-  }, [user]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -46,7 +40,13 @@ export const TransactionHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchTransactions();
+    }
+  }, [user, fetchTransactions]);
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -108,7 +108,7 @@ export const TransactionHistory: React.FC = () => {
   }
 
   return (
-    <Card className="shadow-betting animate-fade-in">
+    <Card className="shadow-betting animate-fade-in bg-card border border-border text-foreground">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center space-x-2">
           <History className="h-5 w-5 text-primary" />
@@ -133,7 +133,7 @@ export const TransactionHistory: React.FC = () => {
               return (
                 <div
                   key={transaction.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors gap-2 sm:gap-0"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors gap-2 sm:gap-0 bg-card text-foreground"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted flex-shrink-0">

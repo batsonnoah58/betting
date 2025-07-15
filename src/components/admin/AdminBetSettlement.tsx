@@ -9,6 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Clock, DollarSign, User } from 'lucide-react';
 
+function isErrorWithMessage(err: unknown): err is { message: string } {
+  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
+}
+
 interface Bet {
   id: number;
   user_id: string;
@@ -79,9 +83,13 @@ export const AdminBetSettlement: React.FC = () => {
         user: usersMap.get(bet.user_id) || null
       }));
 
-      setBets(betsWithUsers as any);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch bets');
+      setBets(betsWithUsers as Bet[]);
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch bets');
+      }
     } finally {
       setLoading(false);
     }
@@ -133,8 +141,12 @@ export const AdminBetSettlement: React.FC = () => {
       toast.success(`Bet ${settlementStatus === 'won' ? 'settled as won' : 'settled as lost'}`);
       setShowSettlement(false);
       fetchBets(); // Refresh the list
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to settle bet');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        toast.error(err.message);
+      } else {
+        toast.error('Failed to settle bet');
+      }
     } finally {
       setSettlementLoading(false);
     }
@@ -194,7 +206,7 @@ export const AdminBetSettlement: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:w-64 h-9"
           />
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'active' | 'won' | 'lost')}>
             <SelectTrigger className="w-full sm:w-40 h-9">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>

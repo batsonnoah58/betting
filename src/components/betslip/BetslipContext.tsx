@@ -1,28 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-// Types for a betslip selection (can be extended as needed)
-/**
- * Represents a single betslip selection for a game/market/option.
- */
-export interface BetslipSelection {
-  gameId: number;
-  marketId: number;
-  marketOptionId: number;
-  odds: number;
-  label: string;
-  marketName: string;
-  gameLabel: string; // e.g. "Chelsea vs Arsenal"
-}
-
-interface BetslipContextType {
-  selections: BetslipSelection[];
-  addSelection: (selection: BetslipSelection) => void;
-  removeSelection: (marketOptionId: number) => void;
-  clearBetslip: () => void;
-  isSelected: (marketOptionId: number) => boolean;
-}
-
-const BetslipContext = createContext<BetslipContextType | undefined>(undefined);
+import React, { useState, ReactNode } from 'react';
+import type { BetslipSelection } from './BetslipTypes';
+import { BetslipContext } from './BetslipContextValue';
 
 export const BetslipProvider = ({ children }: { children: ReactNode }) => {
   const [selections, setSelections] = useState<BetslipSelection[]>([]);
@@ -50,10 +28,4 @@ export const BetslipProvider = ({ children }: { children: ReactNode }) => {
       {children}
     </BetslipContext.Provider>
   );
-};
-
-export const useBetslip = () => {
-  const ctx = useContext(BetslipContext);
-  if (!ctx) throw new Error('useBetslip must be used within a BetslipProvider');
-  return ctx;
 }; 

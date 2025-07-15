@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 // Reuse AuthFormField from LoginForm
 import { AuthFormField } from './LoginForm';
@@ -53,56 +53,56 @@ export const SignupForm: React.FC = () => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <AuthFormField
-            id="fullName"
+                id="fullName"
             label="Full Name"
-            type="text"
+                type="text"
             value={fullName}
             onChange={e => setFullName(e.target.value)}
-            placeholder="Enter your full name"
+                placeholder="Enter your full name"
             icon={User}
-            required
-          />
+                required
+              />
 
           <AuthFormField
-            id="email"
+                id="email"
             label="Email"
-            type="email"
+                type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            placeholder="Enter your email"
+                placeholder="Enter your email"
             icon={Mail}
-            required
-          />
+                required
+              />
           
           <AuthFormField
-            id="password"
+                id="password"
             label="Password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
+                type={showPassword ? 'text' : 'password'}
+                value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Enter your password"
             icon={Lock}
-            required
+                required
           >
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
           </AuthFormField>
 
           <AuthFormField
-            id="confirmPassword"
+                id="confirmPassword"
             label="Confirm Password"
-            type={showPassword ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
-            placeholder="Confirm your password"
+                placeholder="Confirm your password"
             icon={Lock}
-            required
-          />
+                required
+              />
 
           {error && (
             <div className="text-destructive text-sm bg-destructive/10 p-2 rounded-md">

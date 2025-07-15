@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../AuthGuard';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { DepositModal } from './DepositModal';
@@ -21,13 +21,7 @@ export const WalletSection: React.FC = () => {
     }).format(amount);
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchTodayStats();
-    }
-  }, [user]);
-
-  const fetchTodayStats = async () => {
+  const fetchTodayStats = useCallback(async () => {
     if (!user) return;
 
     const today = new Date();
@@ -51,13 +45,19 @@ export const WalletSection: React.FC = () => {
     } catch (error) {
       console.error('Error fetching today stats:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchTodayStats();
+    }
+  }, [user, fetchTodayStats]);
 
   const canWithdraw = user && user.walletBalance >= 2000;
 
   return (
     <>
-      <Card className="shadow-betting animate-fade-in">
+      <Card className="shadow-betting animate-fade-in bg-card border border-border text-foreground">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2">
             <Wallet className="h-5 w-5 text-primary" />
@@ -87,16 +87,16 @@ export const WalletSection: React.FC = () => {
                 <Minus className="h-4 w-4" />
                 <span>Withdraw</span>
               </Button>
-              <Button 
-                variant="gradient" 
+            <Button 
+              variant="gradient" 
                 size="sm"
-                onClick={() => setShowDepositModal(true)}
+              onClick={() => setShowDepositModal(true)}
                 className="animate-pulse-glow h-10 sm:h-9"
                 aria-label="Deposit funds"
-              >
+            >
                 <Plus className="h-4 w-4 mr-1" />
-                Deposit
-              </Button>
+              Deposit
+            </Button>
             </div>
           </div>
           {/* Empty state for wallet stats */}

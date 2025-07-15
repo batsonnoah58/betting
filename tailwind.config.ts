@@ -1,33 +1,34 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss'
+import animate from 'tailwindcss-animate';
 
 export default {
-	darkMode: ["class"],
-	content: [
-		"./pages/**/*.{ts,tsx}",
-		"./components/**/*.{ts,tsx}",
-		"./app/**/*.{ts,tsx}",
-		"./src/**/*.{ts,tsx}",
-	],
-	prefix: "",
-	theme: {
-		container: {
-			center: true,
-			padding: '2rem',
-			screens: {
-				'2xl': '1400px'
-			}
-		},
-		extend: {
-			colors: {
-				border: 'hsl(var(--border))',
-				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
-				background: 'hsl(var(--background))',
-				foreground: 'hsl(var(--foreground))',
-				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))',
-					glow: 'hsl(var(--primary-glow))'
+  darkMode: ['class'],
+  content: [
+    './src/pages/**/*.{ts,tsx}',
+    './src/components/**/*.{ts,tsx}',
+    './src/app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+  ],
+  prefix: '',
+  theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px'
+      }
+    },
+    extend: {
+      colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+          glow: 'hsl(var(--primary-glow))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -78,7 +79,8 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				'yellow-400': '#FFD600',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -144,11 +146,11 @@ export default {
 				'gradient-hero': 'var(--gradient-hero)'
 			},
 			boxShadow: {
-				'betting': 'var(--shadow-betting)',
-				'card': 'var(--shadow-card)',
+				'betting': '0 4px 16px 0 rgba(255, 214, 0, 0.10)',
+				'card': '0 2px 8px 0 rgba(0,0,0,0.10)',
 				'glow': 'var(--shadow-glow)'
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [animate],
 } satisfies Config;

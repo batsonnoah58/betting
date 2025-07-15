@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -197,18 +197,19 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   onClick={handleWithdraw}
-                  disabled={!amount || parseFloat(amount) < 2000 || parseFloat(amount) > (user?.walletBalance || 0) || isProcessing}
-                  className="flex-1"
+                  variant="gradient"
+                  className="flex-1 flex items-center justify-center"
+                  disabled={isProcessing}
                 >
                   {isProcessing ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
+                      <svg className="animate-spin h-5 w-5 mr-2 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                      Processing…
                     </>
                   ) : (
-                    `Withdraw ${amount ? formatCurrency(amount) : ''}`
+                    'Withdraw'
                   )}
                 </Button>
               </div>

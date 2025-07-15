@@ -10,12 +10,16 @@ import {
   DrawerClose
 } from '../ui/drawer';
 import { Button } from '../ui/button';
-import { useBetslip } from './BetslipContext';
+import { useBetslip } from './useBetslip';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { TablesInsert } from '@/integrations/supabase/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+
+function isErrorWithMessage(err: unknown): err is { message: string } {
+  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
+}
 
 export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boolean) => void }> = ({ open, onOpenChange }) => {
   const { selections, removeSelection, clearBetslip } = useBetslip();
@@ -87,8 +91,12 @@ export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boo
       setShowDrawer(false);
       toast.success(`Multi-bet placed!\nSelections: ${selections.length}\nCombined Odds: ${combinedOdds.toFixed(2)}\nStake: KES ${stake}\nPotential Winnings: KES ${potentialWinnings.toFixed(2)}`);
       await refreshUser();
-    } catch (err: any) {
-      toast.error('Failed to place multi-bet. Please try again.');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        toast.error(err.message);
+      } else {
+        toast.error('Failed to place multi-bet. Please try again.');
+      }
       // Refund stake if error
       await updateWallet(Number(stake));
     } finally {
@@ -103,7 +111,7 @@ export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boo
           Betslip ({selections.length})
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="max-w-lg mx-auto w-full">
+      <DrawerContent className="betslip-drawer max-w-lg mx-auto w-full bg-card border border-border text-foreground">
         <DrawerHeader>
           <DrawerTitle>Betslip</DrawerTitle>
           <DrawerDescription>
@@ -112,7 +120,7 @@ export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boo
         </DrawerHeader>
         <div className="px-4 py-2 space-y-3">
           {selections.map(sel => (
-            <div key={sel.marketOptionId} className="flex items-center justify-between border-b py-2">
+            <div key={sel.marketOptionId} className="flex items-center justify-between border-b border-border py-2 bg-muted/50 rounded">
               <div>
                 <div className="font-semibold text-primary">{sel.gameLabel}</div>
                 <div className="text-sm text-muted-foreground">{sel.marketName}: <span className="font-bold">{sel.label}</span></div>
@@ -135,7 +143,7 @@ export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boo
               <input
                 type="number"
                 min="10"
-                className="border rounded px-2 py-1 w-24 text-right"
+                className="border border-border rounded px-2 py-1 w-24 text-right bg-muted text-foreground"
                 value={stake}
                 onChange={e => setStake(e.target.value)}
                 placeholder="Enter stake"

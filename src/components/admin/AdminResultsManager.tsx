@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
 
 interface Team { id: number; name: string; }
 interface League { id: number; name: string; }
@@ -17,23 +18,32 @@ interface Game {
   result: string;
   status: string;
   result_type?: string;
-  score_home_half?: number;
-  score_away_half?: number;
-  score_home_full?: number;
-  score_away_full?: number;
+  score_home_half?: number | undefined;
+  score_away_half?: number | undefined;
+  score_home_full?: number | undefined;
+  score_away_full?: number | undefined;
+  home_team?: { id: number; name: string; logo?: string };
+  away_team?: { id: number; name: string; logo?: string };
+  league?: { id: number; name: string };
 }
 
 export const AdminResultsManager: React.FC = () => {
-  const [finishedGames, setFinishedGames] = useState<any[]>([]);
+  // TODO: Replace 'unknown' with a proper Game type if available
+  const [finishedGames, setFinishedGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Dialog state
   const [showEdit, setShowEdit] = useState(false);
-  const [selectedGame, setSelectedGame] = useState<any | null>(null);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   // Form state
-  const [form, setForm] = useState<Partial<Game>>({});
+  const [form, setForm] = useState<Partial<Omit<Game, 'score_home_half' | 'score_away_half' | 'score_home_full' | 'score_away_full'> & {
+    score_home_half?: string;
+    score_away_half?: string;
+    score_home_full?: string;
+    score_away_full?: string;
+  }>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -59,15 +69,15 @@ export const AdminResultsManager: React.FC = () => {
         .order('kick_off_time', { ascending: false });
       if (gamesError) throw gamesError;
       setFinishedGames(gamesData || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch finished games');
+    } catch (err: unknown) {
+      setError((err as Error).message || 'Failed to fetch finished games');
     } finally {
       setLoading(false);
     }
   };
 
   // Open edit dialog
-  const openEdit = (game: any) => {
+  const openEdit = (game: Game) => {
     setSelectedGame(game);
     setForm({
       id: game.id,
@@ -91,16 +101,16 @@ export const AdminResultsManager: React.FC = () => {
       const { error } = await supabase.from('games').update({
         result: form.result as 'home_win' | 'draw' | 'away_win' | 'pending',
         result_type: form.result_type,
-        score_home_half: form.score_home_half !== '' ? Number(form.score_home_half) : null,
-        score_away_half: form.score_away_half !== '' ? Number(form.score_away_half) : null,
-        score_home_full: form.score_home_full !== '' ? Number(form.score_home_full) : null,
-        score_away_full: form.score_away_full !== '' ? Number(form.score_away_full) : null,
+        score_home_half: form.score_home_half && form.score_home_half !== '' ? Number(form.score_home_half) : null,
+        score_away_half: form.score_away_half && form.score_away_half !== '' ? Number(form.score_away_half) : null,
+        score_home_full: form.score_home_full && form.score_home_full !== '' ? Number(form.score_home_full) : null,
+        score_away_full: form.score_away_full && form.score_away_full !== '' ? Number(form.score_away_full) : null,
       }).eq('id', selectedGame.id);
       if (error) throw error;
       setShowEdit(false);
       fetchFinishedGames();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to update result');
+    } catch (err: unknown) {
+      setFormError((err as Error).message || 'Failed to update result');
     } finally {
       setFormLoading(false);
     }
@@ -114,12 +124,26 @@ export const AdminResultsManager: React.FC = () => {
 
   const getResultBadge = (result: string) => {
     const variants = {
-      'home_win': { text: 'Home Win', className: 'bg-green-100 text-green-800' },
-      'draw': { text: 'Draw', className: 'bg-yellow-100 text-yellow-800' },
-      'away_win': { text: 'Away Win', className: 'bg-blue-100 text-blue-800' },
-      'pending': { text: 'Pending', className: 'bg-gray-100 text-gray-800' }
+      'home_win': { text: 'Home Win', className: 'bg-success/10 text-success' },
+      'draw': { text: 'Draw', className: 'bg-accent/10 text-accent' },
+      'away_win': { text: 'Away Win', className: 'bg-info/10 text-info' },
+      'pending': { text: 'Pending', className: 'bg-muted text-muted-foreground' }
     };
     return variants[result as keyof typeof variants] || variants.pending;
+  };
+
+  const getResultBadgeVariant = (result: string) => {
+    switch (result) {
+      case 'home_win':
+        return 'default';
+      case 'draw':
+        return 'secondary';
+      case 'away_win':
+        return 'secondary';
+      case 'pending':
+      default:
+        return 'outline';
+    }
   };
 
   return (
@@ -156,18 +180,18 @@ export const AdminResultsManager: React.FC = () => {
                 </TableRow>
               ) : (
                 finishedGames.map((game) => {
-                  const resultBadge = getResultBadge(game.result);
+                  const resultBadge = getResultBadge((game as Game).result);
                   return (
-                    <TableRow key={game.id}>
-                      <TableCell>{game.id}</TableCell>
-                      <TableCell>{game.home_team.logo ? <img src={game.home_team.logo} alt={game.home_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.home_team.name}</TableCell>
-                      <TableCell>{game.away_team.logo ? <img src={game.away_team.logo} alt={game.away_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.away_team.name}</TableCell>
-                      <TableCell>{game.league?.name}</TableCell>
-                      <TableCell>{game.kick_off_time}</TableCell>
+                    <TableRow key={(game as Game).id}>
+                      <TableCell>{(game as Game).id}</TableCell>
+                      <TableCell>{(game as Game).home_team?.logo ? <img src={(game as Game).home_team.logo} alt={(game as Game).home_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {(game as Game).home_team?.name}</TableCell>
+                      <TableCell>{(game as Game).away_team?.logo ? <img src={(game as Game).away_team.logo} alt={(game as Game).away_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {(game as Game).away_team?.name}</TableCell>
+                      <TableCell>{(game as Game).league?.name}</TableCell>
+                      <TableCell>{(game as Game).kick_off_time}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${resultBadge.className}`}>
+                        <Badge variant={getResultBadgeVariant((game as Game).result)} className={resultBadge.className}>
                           {resultBadge.text}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Button size="sm" variant="outline" onClick={() => openEdit(game)}>Update Result</Button>
@@ -192,7 +216,7 @@ export const AdminResultsManager: React.FC = () => {
             <div>
               <Label>Game</Label>
               <div className="p-3 bg-muted rounded">
-                {selectedGame?.home_team?.name} vs {selectedGame?.away_team?.name}
+                {(selectedGame as Game)?.home_team?.name} vs {(selectedGame as Game)?.away_team?.name}
               </div>
             </div>
             <div>

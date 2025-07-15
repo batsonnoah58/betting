@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '../ui/badge';
 
 interface User {
   id: string;
@@ -13,6 +14,10 @@ interface User {
   wallet_balance: number;
   daily_access_granted_until: string | null;
   is_admin: boolean;
+}
+
+function isErrorWithMessage(err: unknown): err is { message: string } {
+  return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
 }
 
 export const AdminUsersManager: React.FC = () => {
@@ -39,9 +44,16 @@ export const AdminUsersManager: React.FC = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const fetchLock = useRef(false);
+
   // Fetch users
   useEffect(() => {
-    fetchUsers();
+    if (!fetchLock.current) {
+      fetchLock.current = true;
+      fetchUsers().finally(() => {
+        fetchLock.current = false;
+      });
+    }
   }, []);
 
   const fetchUsers = async () => {
@@ -76,8 +88,12 @@ export const AdminUsersManager: React.FC = () => {
       });
 
       setUsers(usersWithData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch users');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setError(err.message);
+      } else {
+        setError('Failed to fetch users');
+      }
     } finally {
       setLoading(false);
     }
@@ -135,8 +151,12 @@ export const AdminUsersManager: React.FC = () => {
 
       setShowEdit(false);
       fetchUsers();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to update user');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to update user');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -157,8 +177,12 @@ export const AdminUsersManager: React.FC = () => {
       
       setShowDelete(false);
       fetchUsers();
-    } catch (err: any) {
-      setFormError(err.message || 'Failed to delete user');
+    } catch (err: unknown) {
+      if (isErrorWithMessage(err)) {
+        setFormError(err.message);
+      } else {
+        setFormError('Failed to delete user');
+      }
     } finally {
       setFormLoading(false);
     }
@@ -224,9 +248,9 @@ export const AdminUsersManager: React.FC = () => {
                     <TableCell>{formatCurrency(user.wallet_balance)}</TableCell>
                     <TableCell>{formatDate(user.daily_access_granted_until)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_admin ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      <Badge variant={user.is_admin ? 'default' : 'outline'}>
                         {user.is_admin ? 'Admin' : 'User'}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button size="sm" variant="outline" onClick={() => openEdit(user)} className="mr-2">Edit</Button>
