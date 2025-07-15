@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../AuthGuard';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
@@ -108,16 +108,16 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
     });
   };
 
-  const getConfidenceBadge = (confidence: string) => {
+  const getConfidenceBadge = useCallback((confidence: string) => {
     const variants = {
       'very-high': { className: 'bg-gradient-success text-white', text: '🔥 VERY HIGH' },
       'high': { className: 'bg-success text-success-foreground', text: '⭐ HIGH' },
       'medium': { className: 'bg-warning text-warning-foreground', text: '📊 MEDIUM' }
     };
     return variants[confidence as keyof typeof variants] || variants.medium;
-  };
+  }, []);
 
-  const handleBet = async (betType: 'home' | 'draw' | 'away') => {
+  const handleBet = useCallback(async (betType: 'home' | 'draw' | 'away') => {
     if (!user) {
       toast.error("Please login to place bets");
       return;
@@ -150,7 +150,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
       odds
     });
     setShowBetConfirmation(true);
-  };
+  }, [user, stakes, game.odds]);
 
   const confirmBet = async () => {
     if (!pendingBet) return;
@@ -198,7 +198,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
   };
 
   // Add handler for betting on a market option
-  const handleMarketOptionBet = async (option: MarketOption) => {
+  const handleMarketOptionBet = useCallback(async (option: MarketOption) => {
     if (!user) {
       toast.error("Please login to place bets");
       return;
@@ -225,7 +225,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
       option
     });
     setShowBetConfirmation(true);
-  };
+  }, [user, marketStakes]);
 
   const confirmMarketOptionBet = async () => {
     if (!pendingBet || !pendingBet.option) return;
@@ -272,22 +272,26 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
   });
 
   // Extract unique market types for filter dropdown
-  const uniqueMarketTypes = Array.from(new Set(markets.map((m) => m.type)));
+  const uniqueMarketTypes = useMemo(() => Array.from(new Set(markets.map((m) => m.type))), [markets]);
 
   // Group markets by name for display
-  const groupedMarkets: Record<string, { market: Market; options: MarketOption[] }> = {};
-  markets.forEach((market) => {
-    groupedMarkets[market.name] = {
-      market,
-      options: marketOptions.filter((opt) => opt.market_id === market.id),
-    };
-  });
+  const groupedMarkets: Record<string, { market: Market; options: MarketOption[] }> = useMemo(() => {
+    return markets.reduce((acc, market) => {
+      acc[market.name] = {
+        market,
+        options: marketOptions.filter((opt) => opt.market_id === market.id),
+      };
+      return acc;
+    }, {} as Record<string, { market: Market; options: MarketOption[] }>);
+  }, [markets, marketOptions]);
 
   // Group all markets by name for display
-  const allGroupedMarkets: { market: Market; options: MarketOption[] }[] = markets.map((market) => ({
-    market,
-    options: marketOptions.filter((opt) => opt.market_id === market.id),
-  }));
+  const allGroupedMarkets: { market: Market; options: MarketOption[] }[] = useMemo(() => {
+    return markets.map((market) => ({
+      market,
+      options: marketOptions.filter((opt) => opt.market_id === market.id),
+    }));
+  }, [markets, marketOptions]);
 
   // Define the order and display names for the main markets
   const mainMarketOrder = [
@@ -306,14 +310,14 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
   });
 
   // Option filter/sort helpers
-  const filterAndSortOptions = (marketId: number) => {
+  const filterAndSortOptions = useCallback((marketId: number) => {
     let opts = marketOptions.filter((opt) => opt.market_id === marketId);
     if (optionLabelFilter) {
       opts = opts.filter((opt) => opt.label.toLowerCase().includes(optionLabelFilter.toLowerCase()));
     }
     opts = [...opts].sort((a, b) => optionOddsAsc ? a.odds - b.odds : b.odds - a.odds);
     return opts;
-  };
+  }, [marketOptions, optionLabelFilter, optionOddsAsc]);
 
   const confidence = getConfidenceBadge(game.confidence);
   const canBet = !!user;

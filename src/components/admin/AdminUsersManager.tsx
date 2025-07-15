@@ -16,8 +16,17 @@ interface User {
 }
 
 export const AdminUsersManager: React.FC = () => {
+  /**
+   * List of users for admin management.
+   */
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  /**
+   * Loading state for user fetches.
+   */
+  const [loading, setLoading] = useState<boolean>(true);
+  /**
+   * Error message for user fetches.
+   */
   const [error, setError] = useState<string | null>(null);
 
   // Dialog state

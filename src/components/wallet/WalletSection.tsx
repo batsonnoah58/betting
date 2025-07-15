@@ -75,7 +75,6 @@ export const WalletSection: React.FC = () => {
                 <span>Available Balance</span>
               </div>
             </div>
-            
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
               <Button 
                 variant="outline" 
@@ -83,6 +82,7 @@ export const WalletSection: React.FC = () => {
                 onClick={() => setShowWithdrawModal(true)}
                 disabled={!canWithdraw}
                 className="flex items-center justify-center space-x-1 h-10 sm:h-9"
+                aria-label="Withdraw funds"
               >
                 <Minus className="h-4 w-4" />
                 <span>Withdraw</span>
@@ -92,12 +92,17 @@ export const WalletSection: React.FC = () => {
                 size="sm"
                 onClick={() => setShowDepositModal(true)}
                 className="animate-pulse-glow h-10 sm:h-9"
+                aria-label="Deposit funds"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Deposit
               </Button>
             </div>
           </div>
+          {/* Empty state for wallet stats */}
+          {todayStats.wins === 0 && todayStats.losses === 0 && (
+            <div className="text-center text-muted-foreground mt-4 text-sm">No transactions yet. Start betting to see your stats!</div>
+          )}
 
           <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-border">
             <div className="text-center">

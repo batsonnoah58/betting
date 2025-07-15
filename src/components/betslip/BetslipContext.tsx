@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 // Types for a betslip selection (can be extended as needed)
+/**
+ * Represents a single betslip selection for a game/market/option.
+ */
 export interface BetslipSelection {
   gameId: number;
   marketId: number;

@@ -152,6 +152,8 @@ export const GamesList: React.FC = () => {
                   size="sm"
                   onClick={() => setSelectedLeague(league)}
                   className="text-xs h-8"
+                  aria-pressed={selectedLeague === league}
+                  aria-label={`Filter by ${league}`}
                 >
                   {league === 'all' ? 'All Leagues' : league}
                 </Button>
@@ -178,6 +180,14 @@ export const GamesList: React.FC = () => {
               <Button onClick={fetchGamesAndLeagues} variant="outline">
                 Try Again
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : filteredGames.length === 0 ? (
+        <Card className="shadow-betting">
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-center py-8">
+              <div className="text-muted-foreground mb-2 text-lg">No games available for your filters.<br/>Please check back later or try a different league.</div>
             </div>
           </CardContent>
         </Card>

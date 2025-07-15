@@ -49,8 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('role')
         .eq('user_id', userId);
 
-      console.log('Fetched roles for user:', roles); // DEBUG
-
       const isAdmin = roles?.some(r => r.role === 'admin') || false;
 
       if (profile) {
@@ -61,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           walletBalance: Number(profile.wallet_balance),
           isAdmin,
         };
-        console.log('User object:', userObj); // DEBUG
         return userObj;
       }
       return null;
