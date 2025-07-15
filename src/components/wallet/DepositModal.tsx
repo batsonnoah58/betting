@@ -217,8 +217,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
                 />
                 <p className="text-xs text-muted-foreground">Minimum: KES 100 | Maximum: KES 100,000</p>
               </div>
-              {status === 'error' && errorMessage && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              {errorMessage && status === 'error' && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2">
                   <div className="flex items-center space-x-2">
                     <AlertCircle className="h-4 w-4 text-destructive" />
                     <p className="text-sm text-destructive">{errorMessage}</p>

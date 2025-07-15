@@ -11,6 +11,10 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '.
 import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { useBetslip } from '../betslip/BetslipContext';
+import { TeamLogo } from './GameCard/TeamLogo';
+import { BetButton } from './GameCard/BetButton';
+import { MarketList } from './GameCard/MarketList';
+import { BetConfirmationDialog } from './GameCard/BetConfirmationDialog';
 
 interface Game {
   id: number;
@@ -54,6 +58,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
   const [bettingOnOption, setBettingOnOption] = useState<number | null>(null);
   const [showBetConfirmation, setShowBetConfirmation] = useState(false);
   const [pendingBet, setPendingBet] = useState<{ type: 'home' | 'draw' | 'away' | 'option'; stake: number; odds: number; option?: MarketOption } | null>(null);
+  const [marketsLoading, setMarketsLoading] = useState(false);
+  const [marketsError, setMarketsError] = useState<string | null>(null);
 
   // Filtering, sorting, grouping state
   const [marketTypeFilter, setMarketTypeFilter] = useState<string>('all');
@@ -65,24 +71,30 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
 
   useEffect(() => {
     const fetchMarkets = async () => {
-      const { data: marketsData, error: marketsError } = await supabase
-        .from('markets')
-        .select('*')
-        .eq('game_id', game.id);
-      if (!marketsError && marketsData) {
-        setMarkets(marketsData);
-        if (marketsData.length > 0) {
+      setMarketsLoading(true);
+      setMarketsError(null);
+      try {
+        const { data: marketsData, error: marketsErrorObj } = await supabase
+          .from('markets')
+          .select('*')
+          .eq('game_id', game.id);
+        if (marketsErrorObj) throw marketsErrorObj;
+        setMarkets(marketsData || []);
+        if (marketsData && marketsData.length > 0) {
           const marketIds = marketsData.map((m) => m.id);
           const { data: optionsData, error: optionsError } = await supabase
             .from('market_options')
             .select('*')
             .in('market_id', marketIds);
-          if (!optionsError && optionsData) {
-            setMarketOptions(optionsData);
-          }
+          if (optionsError) throw optionsError;
+          setMarketOptions(optionsData || []);
         } else {
           setMarketOptions([]);
         }
+      } catch (err: any) {
+        setMarketsError(err.message || 'Failed to load markets.');
+      } finally {
+        setMarketsLoading(false);
       }
     };
     fetchMarkets();
@@ -327,37 +339,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
 
         <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-4 mb-6 gap-3 sm:gap-0">
           <div className="text-center flex-1">
-            <div className="text-2xl mb-1">
-              {game.homeTeam.logo && game.homeTeam.logo !== '⚽' ? (
-                <img
-                  src={game.homeTeam.logo}
-                  alt={game.homeTeam.name}
-                  className="inline-block h-8 w-8 object-contain"
-                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.append('⚽'); }}
-                />
-              ) : (
-                '⚽'
-              )}
-            </div>
-            <div className="font-semibold text-sm leading-tight">{game.homeTeam.name}</div>
+            <TeamLogo logo={game.homeTeam.logo} name={game.homeTeam.name} size={32} />
           </div>
           <div className="text-center px-4">
             <div className="text-lg font-bold text-muted-foreground">VS</div>
           </div>
           <div className="text-center flex-1">
-            <div className="text-2xl mb-1">
-              {game.awayTeam.logo && game.awayTeam.logo !== '⚽' ? (
-                <img
-                  src={game.awayTeam.logo}
-                  alt={game.awayTeam.name}
-                  className="inline-block h-8 w-8 object-contain"
-                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.append('⚽'); }}
-                />
-              ) : (
-                '⚽'
-              )}
-            </div>
-            <div className="font-semibold text-sm leading-tight">{game.awayTeam.name}</div>
+            <TeamLogo logo={game.awayTeam.logo} name={game.awayTeam.name} size={32} />
           </div>
         </div>
 
@@ -375,79 +363,34 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {/* Home Win */}
-          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(1) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
-            <div className="text-center mb-2">
-              <div className="text-xs text-muted-foreground mb-1">Home Win</div>
-              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.home}</div>
-            </div>
-            {canBet ? (
-              <Button
-                size="sm"
-                variant={isSelected(1) ? 'success' : 'betting'}
-                onClick={() => isSelected(1)
-                  ? removeSelection(1)
-                  : addSelection(get1X2Selection('home'))}
-                className="w-full text-xs h-8 sm:h-9"
-              >
-                {isSelected(1) ? 'Remove from Betslip' : 'Add to Betslip'}
-              </Button>
-            ) : (
-              <div className="text-center py-2">
-                <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
-              </div>
-            )}
-          </div>
+          <BetButton
+            odds={game.odds.home}
+            label="Add to Betslip"
+            isSelected={isSelected(1)}
+            onClick={() => isSelected(1) ? removeSelection(1) : addSelection(get1X2Selection('home'))}
+            disabled={!canBet}
+            loading={bettingOn === 'home'}
+          />
 
           {/* Draw */}
-          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(2) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
-            <div className="text-center mb-2">
-              <div className="text-xs text-muted-foreground mb-1">Draw</div>
-              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.draw}</div>
-            </div>
-            {canBet ? (
-              <Button
-                size="sm"
-                variant={isSelected(2) ? 'success' : 'betting'}
-                onClick={() => isSelected(2)
-                  ? removeSelection(2)
-                  : addSelection(get1X2Selection('draw'))}
-                className="w-full text-xs h-8 sm:h-9"
-              >
-                {isSelected(2) ? 'Remove from Betslip' : 'Add to Betslip'}
-              </Button>
-            ) : (
-              <div className="text-center py-2">
-                <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
-              </div>
-            )}
-          </div>
+          <BetButton
+            odds={game.odds.draw}
+            label="Add to Betslip"
+            isSelected={isSelected(2)}
+            onClick={() => isSelected(2) ? removeSelection(2) : addSelection(get1X2Selection('draw'))}
+            disabled={!canBet}
+            loading={bettingOn === 'draw'}
+          />
 
           {/* Away Win */}
-          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(3) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
-            <div className="text-center mb-2">
-              <div className="text-xs text-muted-foreground mb-1">Away Win</div>
-              <div className="text-base sm:text-lg font-bold text-primary">{game.odds.away}</div>
-            </div>
-            {canBet ? (
-              <Button
-                size="sm"
-                variant={isSelected(3) ? 'success' : 'betting'}
-                onClick={() => isSelected(3)
-                  ? removeSelection(3)
-                  : addSelection(get1X2Selection('away'))}
-                className="w-full text-xs h-8 sm:h-9"
-              >
-                {isSelected(3) ? 'Remove from Betslip' : 'Add to Betslip'}
-              </Button>
-            ) : (
-              <div className="text-center py-2">
-                <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
-              </div>
-            )}
-          </div>
+          <BetButton
+            odds={game.odds.away}
+            label="Add to Betslip"
+            isSelected={isSelected(3)}
+            onClick={() => isSelected(3) ? removeSelection(3) : addSelection(get1X2Selection('away'))}
+            disabled={!canBet}
+            loading={bettingOn === 'away'}
+          />
         </div>
 
         {/* Flexible Markets Section */}
@@ -487,50 +430,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
                 <Switch checked={optionOddsAsc} onCheckedChange={setOptionOddsAsc} />
               </div>
             </div>
-            {/* Grouped by type */}
-            {Object.keys(groupedMarkets).map((type) => (
-              (marketTypeFilter === 'all' || marketTypeFilter === type) && groupedMarkets[type].options.length > 0 && (
-                <div key={type} className="mb-6">
-                  <div className="font-semibold text-primary mb-3 text-sm">{type}</div>
-                  {groupedMarkets[type].options
-                    .sort((a, b) => {
-                      if (marketSort === 'name') return a.label.localeCompare(b.label);
-                      if (marketSort === 'type') return a.label.localeCompare(b.label);
-                      return 0;
-                    })
-                    .map((option) => (
-                      <div key={option.id} className={`mb-4 p-3 rounded-lg border border-primary/10 bg-muted transition-all duration-150 ${isSelected(option.id) ? 'border-2 border-success bg-success/10 scale-105' : ''}`}>
-                        <div className="font-semibold mb-3 text-sm">{option.label} <span className="text-xs text-muted-foreground">({option.odds})</span></div>
-                        {canBet ? (
-                          <Button
-                            size="sm"
-                            variant={isSelected(option.id) ? 'success' : 'betting'}
-                            onClick={() => isSelected(option.id)
-                              ? removeSelection(option.id)
-                              : addSelection({
-                                  gameId: game.id,
-                                  marketId: option.market_id,
-                                  marketOptionId: option.id,
-                                  odds: option.odds,
-                                  label: option.label,
-                                  marketName: groupedMarkets[type].market.name,
-                                  gameLabel: `${game.homeTeam.name} vs ${game.awayTeam.name}`
-                                })}
-                            className="w-full text-xs h-8 sm:h-9"
-                          >
-                            {isSelected(option.id) ? 'Remove from Betslip' : 'Add to Betslip'}
-                          </Button>
-                        ) : (
-                          <div className="text-center py-2">
-                            <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
-                            <div className="text-xs text-muted-foreground">{user ? 'Deposit to bet' : 'Login to bet'}</div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )
-            ))}
+            <MarketList
+              markets={markets}
+              marketOptions={marketOptions}
+              onOptionBet={handleMarketOptionBet}
+              loading={marketsLoading}
+              error={marketsError}
+            />
           </div>
         )}
 
@@ -571,54 +477,16 @@ export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => 
           </div>
         </div>
       </CardContent>
-      {showBetConfirmation && pendingBet && (
-        <Dialog open={showBetConfirmation} onOpenChange={setShowBetConfirmation}>
-          <DialogContent className="w-[95vw] max-w-md sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Confirm Your Bet</DialogTitle>
-              <DialogDescription>
-                Please review your bet details before confirming.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Stake:</span>
-                    <div className="text-lg font-bold text-primary">KES {pendingBet.stake}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Odds:</span>
-                    <div className="text-lg font-bold">{pendingBet.odds}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Potential Winnings:</span>
-                    <div className="text-lg font-bold text-success">KES {(pendingBet.stake * pendingBet.odds).toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Bet Type:</span>
-                    <div className="text-lg font-bold">
-                      {pendingBet.type === 'option' ? pendingBet.option?.label : pendingBet.type.toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                <Button variant="outline" onClick={() => setShowBetConfirmation(false)} className="flex-1">
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={confirmBet}
-                  className="flex-1"
-                  variant="gradient"
-                >
-                  Confirm Bet
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <BetConfirmationDialog
+        open={showBetConfirmation}
+        onConfirm={confirmBet}
+        onCancel={() => setShowBetConfirmation(false)}
+        stake={pendingBet?.stake || 0}
+        odds={pendingBet?.odds || 0}
+        label={pendingBet?.type === 'option' && pendingBet.option ? pendingBet.option.label : pendingBet?.type || ''}
+        loading={bettingOn !== null}
+        error={null} // Pass error state if available
+      />
     </Card>
   );
 };

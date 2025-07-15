@@ -127,9 +127,14 @@ export const AdminResultsManager: React.FC = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Results</h2>
       </div>
-      {error && <div className="text-destructive mb-2">{error}</div>}
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2 text-destructive text-center">{error}</div>
+      )}
       {loading ? (
-        <div className="text-center text-muted-foreground py-8">Loading results...</div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3 text-muted-foreground">Loading results...</span>
+        </div>
       ) : (
         <div className="overflow-x-auto w-full">
           <Table>
@@ -192,7 +197,7 @@ export const AdminResultsManager: React.FC = () => {
             </div>
             <div>
               <Label>Result Type</Label>
-              <select name="result_type" value={form.result_type || 'full_time'} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="result_type" value={form.result_type || 'full_time'} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="full_time">Full Time</option>
                 <option value="half_time">Half Time</option>
               </select>
@@ -200,36 +205,42 @@ export const AdminResultsManager: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Home Score (Half Time)</Label>
-                <input name="score_home_half" type="number" min="0" value={form.score_home_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+                <input name="score_home_half" type="number" min="0" value={form.score_home_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading} />
               </div>
               <div>
                 <Label>Away Score (Half Time)</Label>
-                <input name="score_away_half" type="number" min="0" value={form.score_away_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+                <input name="score_away_half" type="number" min="0" value={form.score_away_half ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>Home Score (Full Time)</Label>
-                <input name="score_home_full" type="number" min="0" value={form.score_home_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+                <input name="score_home_full" type="number" min="0" value={form.score_home_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading} />
               </div>
               <div>
                 <Label>Away Score (Full Time)</Label>
-                <input name="score_away_full" type="number" min="0" value={form.score_away_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" />
+                <input name="score_away_full" type="number" min="0" value={form.score_away_full ?? ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading} />
               </div>
             </div>
             <div>
               <Label>Result</Label>
-              <select name="result" value={form.result || 'pending'} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="result" value={form.result || 'pending'} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="pending">Pending</option>
                 <option value="home_win">Home Win</option>
                 <option value="draw">Draw</option>
                 <option value="away_win">Away Win</option>
               </select>
             </div>
-            {formError && <div className="text-destructive text-sm">{formError}</div>}
+            {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save Result'}</Button>
+              <Button type="button" variant="outline" onClick={() => setShowEdit(false)} disabled={formLoading}>Cancel</Button>
+              <Button type="submit" disabled={formLoading} className="w-full">
+                {formLoading ? (
+                  <span className="flex items-center justify-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Processing...</span>
+                ) : (
+                  'Save Result'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

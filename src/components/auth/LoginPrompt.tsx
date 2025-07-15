@@ -4,7 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Lock, User, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const LoginPrompt: React.FC = () => {
+interface LoginPromptProps {
+  onClose?: () => void;
+}
+
+export const LoginPrompt: React.FC<LoginPromptProps> = ({ onClose }) => {
   const navigate = useNavigate();
   return (
     <div className="text-center py-8">
@@ -15,6 +19,11 @@ export const LoginPrompt: React.FC = () => {
             <span>Login Required</span>
           </CardTitle>
         </CardHeader>
+        {onClose && (
+          <Button variant="ghost" className="absolute top-2 right-2" onClick={onClose}>
+            Close
+          </Button>
+        )}
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
             Create an account or login to place bets and manage your wallet.

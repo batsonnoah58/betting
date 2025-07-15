@@ -26,9 +26,11 @@ export const BetslipProvider = ({ children }: { children: ReactNode }) => {
 
   const addSelection = (selection: BetslipSelection) => {
     setSelections((prev) => {
-      // Only one selection per market allowed (remove previous from same market)
-      const filtered = prev.filter(sel => sel.marketId !== selection.marketId);
-      return [...filtered, selection];
+      // Allow multiple options from the same market for a game, but prevent exact duplicates
+      if (prev.some(sel => sel.marketOptionId === selection.marketOptionId)) {
+        return prev;
+      }
+      return [...prev, selection];
     });
   };
 

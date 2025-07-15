@@ -179,8 +179,8 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
                 </p>
               </div>
 
-              {status === 'error' && errorMessage && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              {errorMessage && status === 'error' && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2">
                   <div className="flex items-center space-x-2">
                     <AlertCircle className="h-4 w-4 text-destructive" />
                     <p className="text-sm text-destructive">{errorMessage}</p>
@@ -199,7 +199,7 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({ onClose }) => {
                 </Button>
                 <Button 
                   onClick={handleWithdraw}
-                  disabled={!amount || !phoneNumber || parseFloat(amount) < 2000 || parseFloat(amount) > (user?.walletBalance || 0) || isProcessing}
+                  disabled={!amount || parseFloat(amount) < 2000 || parseFloat(amount) > (user?.walletBalance || 0) || isProcessing}
                   className="flex-1"
                 >
                   {isProcessing ? (

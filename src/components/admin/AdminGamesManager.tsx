@@ -387,9 +387,14 @@ export const AdminGamesManager: React.FC = () => {
         <h2 className="text-xl font-bold">Games</h2>
         <Button variant="gradient" onClick={openAdd}>Add Game</Button>
       </div>
-      {error && <div className="text-destructive mb-2">{error}</div>}
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2 text-destructive text-center">{error}</div>
+      )}
       {loading ? (
-        <div className="text-center text-muted-foreground py-8">Loading games...</div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3 text-muted-foreground">Loading games...</span>
+        </div>
       ) : (
         <div className="overflow-x-auto w-full">  {/* Added for mobile responsiveness */}
           <Table>
@@ -502,14 +507,14 @@ export const AdminGamesManager: React.FC = () => {
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label>Home Team</Label>
-                <select name="home_team_id" value={form.home_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+                <select name="home_team_id" value={form.home_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                   <option value="">Select</option>
                   {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
               </div>
               <div className="flex-1">
                 <Label>Away Team</Label>
-                <select name="away_team_id" value={form.away_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+                <select name="away_team_id" value={form.away_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                   <option value="">Select</option>
                   {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
@@ -517,41 +522,47 @@ export const AdminGamesManager: React.FC = () => {
             </div>
             <div>
               <Label>League</Label>
-              <select name="league_id" value={form.league_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="league_id" value={form.league_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="">Select</option>
                 {leagues.map(league => <option key={league.id} value={league.id}>{league.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Kickoff Time</Label>
-              <Input name="kick_off_time" type="datetime-local" value={form.kick_off_time || ''} onChange={handleFormChange} required />
+              <Input name="kick_off_time" type="datetime-local" value={form.kick_off_time || ''} onChange={handleFormChange} required disabled={formLoading} />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label>Odds Home</Label>
-                <Input name="odds_home" type="number" step="0.01" value={form.odds_home || ''} onChange={handleFormChange} required />
+                <Input name="odds_home" type="number" step="0.01" value={form.odds_home || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
               <div className="flex-1">
                 <Label>Odds Draw</Label>
-                <Input name="odds_draw" type="number" step="0.01" value={form.odds_draw || ''} onChange={handleFormChange} required />
+                <Input name="odds_draw" type="number" step="0.01" value={form.odds_draw || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
               <div className="flex-1">
                 <Label>Odds Away</Label>
-                <Input name="odds_away" type="number" step="0.01" value={form.odds_away || ''} onChange={handleFormChange} required />
+                <Input name="odds_away" type="number" step="0.01" value={form.odds_away || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
             </div>
             <div>
               <Label>Status</Label>
-              <select name="status" value={form.status || 'upcoming'} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="status" value={form.status || 'upcoming'} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="upcoming">Upcoming</option>
                 <option value="live">Live</option>
                 <option value="finished">Finished</option>
               </select>
             </div>
-            {formError && <div className="text-destructive text-sm">{formError}</div>}
+            {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Adding...' : 'Add Game'}</Button>
+              <Button type="button" variant="outline" onClick={() => setShowAdd(false)} disabled={formLoading}>Cancel</Button>
+              <Button type="submit" disabled={formLoading} className="w-full">
+                {formLoading ? (
+                  <span className="flex items-center justify-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Processing...</span>
+                ) : (
+                  'Add Game'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -568,14 +579,14 @@ export const AdminGamesManager: React.FC = () => {
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label>Home Team</Label>
-                <select name="home_team_id" value={form.home_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+                <select name="home_team_id" value={form.home_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                   <option value="">Select</option>
                   {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
               </div>
               <div className="flex-1">
                 <Label>Away Team</Label>
-                <select name="away_team_id" value={form.away_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+                <select name="away_team_id" value={form.away_team_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                   <option value="">Select</option>
                   {teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
@@ -583,41 +594,47 @@ export const AdminGamesManager: React.FC = () => {
             </div>
             <div>
               <Label>League</Label>
-              <select name="league_id" value={form.league_id || ''} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="league_id" value={form.league_id || ''} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="">Select</option>
                 {leagues.map(league => <option key={league.id} value={league.id}>{league.name}</option>)}
               </select>
             </div>
             <div>
               <Label>Kickoff Time</Label>
-              <Input name="kick_off_time" type="datetime-local" value={form.kick_off_time || ''} onChange={handleFormChange} required />
+              <Input name="kick_off_time" type="datetime-local" value={form.kick_off_time || ''} onChange={handleFormChange} required disabled={formLoading} />
             </div>
             <div className="flex gap-2">
               <div className="flex-1">
                 <Label>Odds Home</Label>
-                <Input name="odds_home" type="number" step="0.01" value={form.odds_home || ''} onChange={handleFormChange} required />
+                <Input name="odds_home" type="number" step="0.01" value={form.odds_home || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
               <div className="flex-1">
                 <Label>Odds Draw</Label>
-                <Input name="odds_draw" type="number" step="0.01" value={form.odds_draw || ''} onChange={handleFormChange} required />
+                <Input name="odds_draw" type="number" step="0.01" value={form.odds_draw || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
               <div className="flex-1">
                 <Label>Odds Away</Label>
-                <Input name="odds_away" type="number" step="0.01" value={form.odds_away || ''} onChange={handleFormChange} required />
+                <Input name="odds_away" type="number" step="0.01" value={form.odds_away || ''} onChange={handleFormChange} required disabled={formLoading} />
               </div>
             </div>
             <div>
               <Label>Status</Label>
-              <select name="status" value={form.status || 'upcoming'} onChange={handleFormChange} className="w-full border rounded p-2">
+              <select name="status" value={form.status || 'upcoming'} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="upcoming">Upcoming</option>
                 <option value="live">Live</option>
                 <option value="finished">Finished</option>
               </select>
             </div>
-            {formError && <div className="text-destructive text-sm">{formError}</div>}
+            {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save Changes'}</Button>
+              <Button type="button" variant="outline" onClick={() => setShowEdit(false)} disabled={formLoading}>Cancel</Button>
+              <Button type="submit" disabled={formLoading} className="w-full">
+                {formLoading ? (
+                  <span className="flex items-center justify-center"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>Processing...</span>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -630,9 +647,9 @@ export const AdminGamesManager: React.FC = () => {
             <DialogTitle>Delete Game</DialogTitle>
             <DialogDescription>Are you sure you want to delete this game? This action cannot be undone.</DialogDescription>
           </DialogHeader>
-          {formError && <div className="text-destructive text-sm mb-2">{formError}</div>}
+          {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setShowDelete(false)} disabled={formLoading}>Cancel</Button>
             <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading}>{formLoading ? 'Deleting...' : 'Delete'}</Button>
           </DialogFooter>
         </DialogContent>
@@ -646,13 +663,13 @@ export const AdminGamesManager: React.FC = () => {
           </DialogHeader>
           <div className="space-y-2">
             <Label>Name</Label>
-            <Input name="name" value={marketForm.name || ''} onChange={handleMarketFormChange} />
+            <Input name="name" value={marketForm.name || ''} onChange={handleMarketFormChange} disabled={formLoading} />
             <Label>Type</Label>
-            <Input name="type" value={marketForm.type || ''} onChange={handleMarketFormChange} />
+            <Input name="type" value={marketForm.type || ''} onChange={handleMarketFormChange} disabled={formLoading} />
           </div>
           <DialogFooter>
-            <Button onClick={handleMarketSubmit}>{marketDialogMode === 'add' ? 'Add' : 'Update'}</Button>
-            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+            <Button onClick={handleMarketSubmit} disabled={formLoading}>{marketDialogMode === 'add' ? 'Add' : 'Update'}</Button>
+            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -663,8 +680,8 @@ export const AdminGamesManager: React.FC = () => {
             <DialogDescription>Are you sure you want to delete this market?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="destructive" onClick={handleDeleteMarket}>Delete</Button>
-            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDeleteMarket} disabled={formLoading}>Delete</Button>
+            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -675,13 +692,13 @@ export const AdminGamesManager: React.FC = () => {
           </DialogHeader>
           <div className="space-y-2">
             <Label>Label</Label>
-            <Input name="label" value={optionForm.label || ''} onChange={handleOptionFormChange} />
+            <Input name="label" value={optionForm.label || ''} onChange={handleOptionFormChange} disabled={formLoading} />
             <Label>Odds</Label>
-            <Input name="odds" type="number" value={optionForm.odds || ''} onChange={handleOptionFormChange} />
+            <Input name="odds" type="number" value={optionForm.odds || ''} onChange={handleOptionFormChange} disabled={formLoading} />
           </div>
           <DialogFooter>
-            <Button onClick={handleOptionSubmit}>{optionDialogMode === 'add' ? 'Add' : 'Update'}</Button>
-            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+            <Button onClick={handleOptionSubmit} disabled={formLoading}>{optionDialogMode === 'add' ? 'Add' : 'Update'}</Button>
+            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -692,8 +709,8 @@ export const AdminGamesManager: React.FC = () => {
             <DialogDescription>Are you sure you want to delete this option?</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="destructive" onClick={handleDeleteOption}>Delete</Button>
-            <DialogClose asChild><Button variant="secondary">Cancel</Button></DialogClose>
+            <Button variant="destructive" onClick={handleDeleteOption} disabled={formLoading}>Delete</Button>
+            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -17,12 +17,14 @@ import { toast } from 'sonner';
 import type { TablesInsert } from '@/integrations/supabase/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
-export const BetslipDrawer: React.FC = () => {
+export const BetslipDrawer: React.FC<{ open?: boolean; onOpenChange?: (open: boolean) => void }> = ({ open, onOpenChange }) => {
   const { selections, removeSelection, clearBetslip } = useBetslip();
   const { user, updateWallet, refreshUser } = useAuth();
   const [stake, setStake] = useState('');
   const [placing, setPlacing] = useState(false);
-  const [showDrawer, setShowDrawer] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const showDrawer = open !== undefined ? open : internalOpen;
+  const setShowDrawer = onOpenChange || setInternalOpen;
 
   // Calculate combined odds (product of all odds)
   const combinedOdds = selections.reduce((acc, sel) => acc * sel.odds, 1);

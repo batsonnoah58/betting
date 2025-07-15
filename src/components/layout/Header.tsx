@@ -3,10 +3,22 @@ import { useAuth } from '../AuthGuard';
 import { Button } from '../ui/button';
 import { LogOut, User, Settings, Menu, X, Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { BetslipDrawer } from '../betslip/BetslipDrawer';
+import { LoginPrompt } from '../auth/LoginPrompt';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showBetslip, setShowBetslip] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  const handleBetslipClick = () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+    } else {
+      setShowBetslip(true);
+    }
+  };
 
   return (
     <header className="bg-card/80 backdrop-blur-md border-b border-border shadow-lg sticky top-0 z-50 transition-all">
@@ -51,6 +63,9 @@ export const Header: React.FC = () => {
                     </Button>
                   </Link>
                 )}
+                <Button variant="gradient" size="sm" className="nav-anim rounded-full px-5 py-2 font-semibold" onClick={handleBetslipClick}>
+                  My Betslip
+                </Button>
                 {user?.isAdmin && (
                   <div className="flex items-center space-x-1 bg-primary/10 px-2 py-1 rounded-md animate-fade-in">
                     <Settings className="h-3 w-3 text-primary" />
@@ -118,6 +133,9 @@ export const Header: React.FC = () => {
                     <Button variant="outline" size="sm" className="nav-anim w-full justify-start h-12 text-base rounded-full font-semibold">My Bets</Button>
                   </Link>
                 )}
+                <Button variant="gradient" size="sm" className="nav-anim w-full justify-start h-12 text-base rounded-full font-semibold" onClick={handleBetslipClick}>
+                  My Betslip
+                </Button>
                 {user?.isAdmin && (
                   <div className="flex items-center space-x-2 bg-primary/10 px-3 py-2 rounded-lg mb-3 animate-fade-in">
                     <Settings className="h-4 w-4 text-primary" />
@@ -147,6 +165,9 @@ export const Header: React.FC = () => {
           </div>
         )}
       </div>
+      {/* Betslip Drawer and Login Prompt */}
+      <BetslipDrawer open={showBetslip} onOpenChange={setShowBetslip} />
+      {showLoginPrompt && <LoginPrompt onClose={() => setShowLoginPrompt(false)} />}
     </header>
   );
 };

@@ -5,6 +5,8 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '../AuthGuard';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+// Reuse AuthFormField from LoginForm
+import { AuthFormField } from './LoginForm';
 
 export const SignupForm: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -50,76 +52,57 @@ export const SignupForm: React.FC = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Enter your full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
+          <AuthFormField
+            id="fullName"
+            label="Full Name"
+            type="text"
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            placeholder="Enter your full name"
+            icon={User}
+            required
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
+          <AuthFormField
+            id="email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            icon={Mail}
+            required
+          />
           
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 pr-10"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+          <AuthFormField
+            id="password"
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            icon={Lock}
+            required
+          >
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </AuthFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="confirmPassword"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
+          <AuthFormField
+            id="confirmPassword"
+            label="Confirm Password"
+            type={showPassword ? 'text' : 'password'}
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            placeholder="Confirm your password"
+            icon={Lock}
+            required
+          />
 
           {error && (
             <div className="text-destructive text-sm bg-destructive/10 p-2 rounded-md">

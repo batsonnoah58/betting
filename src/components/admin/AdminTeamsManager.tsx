@@ -157,9 +157,14 @@ export const AdminTeamsManager: React.FC = () => {
         <h2 className="text-xl font-bold">Teams</h2>
         <Button variant="gradient" onClick={openAdd}>Add Team</Button>
       </div>
-      {error && <div className="text-destructive mb-2">{error}</div>}
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2 text-destructive text-center">{error}</div>
+      )}
       {loading ? (
-        <div className="text-center text-muted-foreground py-8">Loading teams...</div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3 text-muted-foreground">Loading teams...</span>
+        </div>
       ) : (
         <div className="overflow-x-auto w-full">
           <Table>
@@ -219,10 +224,12 @@ export const AdminTeamsManager: React.FC = () => {
               <Label>Logo (optional)</Label>
               <Input name="logo" value={form.logo || ''} onChange={handleFormChange} placeholder="⚽" />
             </div>
-            {formError && <div className="text-destructive text-sm">{formError}</div>}
+            {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Adding...' : 'Add Team'}</Button>
+              <Button type="submit" variant="gradient" disabled={formLoading}>
+                {formLoading ? <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Processing...</span> : 'Add Team'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -251,10 +258,12 @@ export const AdminTeamsManager: React.FC = () => {
               <Label>Logo (optional)</Label>
               <Input name="logo" value={form.logo || ''} onChange={handleFormChange} placeholder="⚽" />
             </div>
-            {formError && <div className="text-destructive text-sm">{formError}</div>}
+            {formError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{formError}</div>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
-              <Button type="submit" variant="gradient" disabled={formLoading}>{formLoading ? 'Saving...' : 'Save Changes'}</Button>
+              <Button type="submit" variant="gradient" disabled={formLoading}>
+                {formLoading ? <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Processing...</span> : 'Save Changes'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -270,7 +279,9 @@ export const AdminTeamsManager: React.FC = () => {
           {formError && <div className="text-destructive text-sm mb-2">{formError}</div>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setShowDelete(false)}>Cancel</Button>
-            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading}>{formLoading ? 'Deleting...' : 'Delete'}</Button>
+            <Button type="button" variant="destructive" onClick={handleDelete} disabled={formLoading}>
+              {formLoading ? <span className="flex items-center"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>Deleting...</span> : 'Delete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
