@@ -7,6 +7,8 @@ import { Toaster } from '../components/ui/toaster';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dashboard } from '../components/Dashboard';
+import { BetslipDrawer } from "../components/betslip/BetslipDrawer";
+import { Footer } from "../components/layout/Footer";
 
 const Index = () => {
   const { user } = useAuth();
@@ -47,6 +49,8 @@ const Index = () => {
         <LoginPrompt />
       </main>
       <Toaster />
+      <BetslipDrawer />
+      <Footer isAdmin={user?.isAdmin} />
     </AuthProvider>
   );
 };

@@ -123,9 +123,11 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
 
     } catch (error) {
       console.error('Payment error:', error);
-      setErrorMessage(error instanceof Error ? error.message : "Failed to process payment");
+      setErrorMessage(
+        "We are experiencing an issue with PayPal payments and are working to fix it as soon as possible. Please try again later or use another payment method if available."
+      );
       setStatus('error');
-      toast.error(error instanceof Error ? error.message : "Failed to process payment");
+      // Removed toast.error to prevent bottom notification
     } finally {
       setIsProcessing(false);
     }

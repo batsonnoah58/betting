@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../ui/select';
 import { Switch } from '../ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { useBetslip } from '../betslip/BetslipContext';
 
 interface Game {
   id: number;
@@ -24,6 +25,7 @@ interface Game {
 
 interface GameCardProps {
   game: Game;
+  expanded?: boolean;
 }
 
 // Add types for Market and MarketOption
@@ -42,7 +44,7 @@ interface MarketOption {
   created_at: string;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game }) => {
+export const GameCard: React.FC<GameCardProps> = ({ game, expanded = true }) => {
   const { user, updateWallet } = useAuth();
   const [stakes, setStakes] = useState({ home: '', draw: '', away: '' });
   const [bettingOn, setBettingOn] = useState<'home' | 'draw' | 'away' | null>(null);
@@ -58,6 +60,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
   const [optionLabelFilter, setOptionLabelFilter] = useState('');
   const [marketSort, setMarketSort] = useState<'name' | 'type'>('name');
   const [optionOddsAsc, setOptionOddsAsc] = useState(false);
+
+  const { selections, addSelection, removeSelection, isSelected } = useBetslip();
 
   useEffect(() => {
     const fetchMarkets = async () => {
@@ -244,6 +248,17 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
     }
   };
 
+  // Helper to build betslip selection for 1X2
+  const get1X2Selection = (type: 'home' | 'draw' | 'away') => ({
+    gameId: game.id,
+    marketId: 0, // 0 for 1X2
+    marketOptionId: type === 'home' ? 1 : type === 'draw' ? 2 : 3, // unique per outcome
+    odds: game.odds[type],
+    label: type.charAt(0).toUpperCase() + type.slice(1),
+    marketName: '1X2',
+    gameLabel: `${game.homeTeam.name} vs ${game.awayTeam.name}`
+  });
+
   // Extract unique market types for filter dropdown
   const uniqueMarketTypes = Array.from(new Set(markets.map((m) => m.type)));
 
@@ -255,6 +270,12 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
       options: marketOptions.filter((opt) => opt.market_id === market.id),
     };
   });
+
+  // Group all markets by name for display
+  const allGroupedMarkets: { market: Market; options: MarketOption[] }[] = markets.map((market) => ({
+    market,
+    options: marketOptions.filter((opt) => opt.market_id === market.id),
+  }));
 
   // Define the order and display names for the main markets
   const mainMarketOrder = [
@@ -306,14 +327,36 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
         <div className="flex flex-col sm:flex-row items-center justify-center sm:space-x-4 mb-6 gap-3 sm:gap-0">
           <div className="text-center flex-1">
-            <div className="text-2xl mb-1">{game.homeTeam.logo}</div>
+            <div className="text-2xl mb-1">
+              {game.homeTeam.logo && game.homeTeam.logo !== '⚽' ? (
+                <img
+                  src={game.homeTeam.logo}
+                  alt={game.homeTeam.name}
+                  className="inline-block h-8 w-8 object-contain"
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.append('⚽'); }}
+                />
+              ) : (
+                '⚽'
+              )}
+            </div>
             <div className="font-semibold text-sm leading-tight">{game.homeTeam.name}</div>
           </div>
           <div className="text-center px-4">
             <div className="text-lg font-bold text-muted-foreground">VS</div>
           </div>
           <div className="text-center flex-1">
-            <div className="text-2xl mb-1">{game.awayTeam.logo}</div>
+            <div className="text-2xl mb-1">
+              {game.awayTeam.logo && game.awayTeam.logo !== '⚽' ? (
+                <img
+                  src={game.awayTeam.logo}
+                  alt={game.awayTeam.name}
+                  className="inline-block h-8 w-8 object-contain"
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.append('⚽'); }}
+                />
+              ) : (
+                '⚽'
+              )}
+            </div>
             <div className="font-semibold text-sm leading-tight">{game.awayTeam.name}</div>
           </div>
         </div>
@@ -332,32 +375,22 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {/* Home Win */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
+          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(1) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Home Win</div>
               <div className="text-base sm:text-lg font-bold text-primary">{game.odds.home}</div>
             </div>
             {canBet ? (
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  placeholder="Stake"
-                  value={stakes.home}
-                  onChange={(e) => setStakes(prev => ({ ...prev, home: e.target.value }))}
-                  className="text-xs h-8 sm:h-9"
-                  min="10"
-                  max={user?.walletBalance || 0}
-                />
-                <Button
-                  size="sm"
-                  variant="betting"
-                  onClick={() => handleBet('home')}
-                  disabled={!stakes.home || bettingOn === 'home'}
-                  className="w-full text-xs h-8 sm:h-9"
-                >
-                  {bettingOn === 'home' ? 'Placing...' : 'Bet'}
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant={isSelected(1) ? 'success' : 'betting'}
+                onClick={() => isSelected(1)
+                  ? removeSelection(1)
+                  : addSelection(get1X2Selection('home'))}
+                className="w-full text-xs h-8 sm:h-9"
+              >
+                {isSelected(1) ? 'Remove from Betslip' : 'Add to Betslip'}
+              </Button>
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
@@ -367,32 +400,22 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
 
           {/* Draw */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
+          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(2) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Draw</div>
               <div className="text-base sm:text-lg font-bold text-primary">{game.odds.draw}</div>
             </div>
             {canBet ? (
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  placeholder="Stake"
-                  value={stakes.draw}
-                  onChange={(e) => setStakes(prev => ({ ...prev, draw: e.target.value }))}
-                  className="text-xs h-8 sm:h-9"
-                  min="10"
-                  max={user?.walletBalance || 0}
-                />
-                <Button
-                  size="sm"
-                  variant="betting"
-                  onClick={() => handleBet('draw')}
-                  disabled={!stakes.draw || bettingOn === 'draw'}
-                  className="w-full text-xs h-8 sm:h-9"
-                >
-                  {bettingOn === 'draw' ? 'Placing...' : 'Bet'}
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant={isSelected(2) ? 'success' : 'betting'}
+                onClick={() => isSelected(2)
+                  ? removeSelection(2)
+                  : addSelection(get1X2Selection('draw'))}
+                className="w-full text-xs h-8 sm:h-9"
+              >
+                {isSelected(2) ? 'Remove from Betslip' : 'Add to Betslip'}
+              </Button>
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
@@ -402,32 +425,22 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
           </div>
 
           {/* Away Win */}
-          <div className="bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors">
+          <div className={`bg-betting-background border border-primary/20 rounded-lg p-2 sm:p-3 hover:bg-betting-hover transition-colors ${isSelected(3) ? 'border-2 border-success bg-success/10 scale-105 transition-transform duration-150' : ''}`}>
             <div className="text-center mb-2">
               <div className="text-xs text-muted-foreground mb-1">Away Win</div>
               <div className="text-base sm:text-lg font-bold text-primary">{game.odds.away}</div>
             </div>
             {canBet ? (
-              <div className="space-y-2">
-                <Input
-                  type="number"
-                  placeholder="Stake"
-                  value={stakes.away}
-                  onChange={(e) => setStakes(prev => ({ ...prev, away: e.target.value }))}
-                  className="text-xs h-8 sm:h-9"
-                  min="10"
-                  max={user?.walletBalance || 0}
-                />
-                <Button
-                  size="sm"
-                  variant="betting"
-                  onClick={() => handleBet('away')}
-                  disabled={!stakes.away || bettingOn === 'away'}
-                  className="w-full text-xs h-8 sm:h-9"
-                >
-                  {bettingOn === 'away' ? 'Placing...' : 'Bet'}
-                </Button>
-              </div>
+              <Button
+                size="sm"
+                variant={isSelected(3) ? 'success' : 'betting'}
+                onClick={() => isSelected(3)
+                  ? removeSelection(3)
+                  : addSelection(get1X2Selection('away'))}
+                className="w-full text-xs h-8 sm:h-9"
+              >
+                {isSelected(3) ? 'Remove from Betslip' : 'Add to Betslip'}
+              </Button>
             ) : (
               <div className="text-center py-2">
                 <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
@@ -486,29 +499,27 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
                       return 0;
                     })
                     .map((option) => (
-                      <div key={option.id} className="mb-4 p-3 rounded-lg border border-primary/10 bg-muted">
+                      <div key={option.id} className={`mb-4 p-3 rounded-lg border border-primary/10 bg-muted transition-all duration-150 ${isSelected(option.id) ? 'border-2 border-success bg-success/10 scale-105' : ''}`}>
                         <div className="font-semibold mb-3 text-sm">{option.label} <span className="text-xs text-muted-foreground">({option.odds})</span></div>
                         {canBet ? (
-                          <div className="w-full mt-2 space-y-2">
-                            <Input
-                              type="number"
-                              placeholder="Stake"
-                              value={marketStakes[option.id] || ''}
-                              onChange={(e) => setMarketStakes((prev) => ({ ...prev, [option.id]: e.target.value }))}
-                              className="text-xs h-8 sm:h-9"
-                              min="10"
-                              max={user?.walletBalance || 0}
-                            />
-                            <Button
-                              size="sm"
-                              variant="betting"
-                              onClick={() => handleMarketOptionBet(option)}
-                              disabled={!marketStakes[option.id] || bettingOnOption === option.id}
-                              className="w-full text-xs h-8 sm:h-9"
-                            >
-                              {bettingOnOption === option.id ? 'Placing...' : 'Bet'}
-                            </Button>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant={isSelected(option.id) ? 'success' : 'betting'}
+                            onClick={() => isSelected(option.id)
+                              ? removeSelection(option.id)
+                              : addSelection({
+                                  gameId: game.id,
+                                  marketId: option.market_id,
+                                  marketOptionId: option.id,
+                                  odds: option.odds,
+                                  label: option.label,
+                                  marketName: groupedMarkets[type].market.name,
+                                  gameLabel: `${game.homeTeam.name} vs ${game.awayTeam.name}`
+                                })}
+                            className="w-full text-xs h-8 sm:h-9"
+                          >
+                            {isSelected(option.id) ? 'Remove from Betslip' : 'Add to Betslip'}
+                          </Button>
                         ) : (
                           <div className="text-center py-2">
                             <Lock className="h-4 w-4 text-muted-foreground mx-auto mb-1" />
@@ -524,30 +535,28 @@ export const GameCard: React.FC<GameCardProps> = ({ game }) => {
         )}
 
         {/* Grouped Markets Display */}
-        <div className="space-y-6 mt-4">
-          {mainMarketOrder.map((marketName) => {
-            const group = groupedMarkets[marketName];
-            if (!group) return null;
-            return (
-              <div key={marketName} className="bg-muted/10 rounded-lg p-3">
-                <div className="flex items-center mb-2">
-                  <span className="font-semibold text-base mr-2">{marketName}</span>
+        {expanded && (
+          <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto pr-2">
+            {allGroupedMarkets.map(({ market, options }) => (
+              <div key={market.id} className="flex items-center py-2 border-b border-border last:border-b-0">
+                <div className="min-w-[140px] font-semibold text-sm text-primary mr-4 whitespace-nowrap">
+                  {market.name}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {group.options.map((option) => (
+                <div className="flex flex-wrap gap-2">
+                  {options.map((option) => (
                     <div
                       key={option.id}
-                      className="flex flex-col items-center justify-center bg-card border border-border rounded-lg p-2 text-center shadow-sm"
+                      className="px-3 py-1 rounded-full bg-muted border border-primary/20 text-sm font-medium shadow-sm flex items-center min-w-[60px] justify-center"
                     >
-                      <span className="text-xs text-muted-foreground mb-1">{option.label}</span>
-                      <span className="font-bold text-lg">{Number(option.odds).toFixed(2)}</span>
+                      <span className="mr-1 text-muted-foreground">{option.label}</span>
+                      <span className="font-bold text-primary">{Number(option.odds).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4 pt-3 border-t border-border">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-muted-foreground gap-2 sm:gap-0">

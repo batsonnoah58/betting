@@ -415,8 +415,8 @@ export const AdminGamesManager: React.FC = () => {
                   <React.Fragment key={game.id}>
                     <TableRow>
                       <TableCell>{game.id}</TableCell>
-                      <TableCell>{game.home_team?.name}</TableCell>
-                      <TableCell>{game.away_team?.name}</TableCell>
+                      <TableCell>{game.home_team.logo ? <img src={game.home_team.logo} alt={game.home_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.home_team.name}</TableCell>
+                      <TableCell>{game.away_team.logo ? <img src={game.away_team.logo} alt={game.away_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.away_team.name}</TableCell>
                       <TableCell>{game.league?.name}</TableCell>
                       <TableCell>{game.kick_off_time}</TableCell>
                       <TableCell>{game.odds_home} / {game.odds_draw} / {game.odds_away}</TableCell>

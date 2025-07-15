@@ -30,7 +30,7 @@ serve(async (req) => {
     const environment = Deno.env.get("PAYPAL_ENVIRONMENT") || "sandbox";
     
     if (!paypalClientId || !paypalClientSecret) {
-      throw new Error("PayPal credentials not configured");
+      throw new Error("We are experiencing an issue with PayPal payments and are working to fix it as soon as possible. Please try again later or use another payment method if available.");
     }
 
     const baseUrl = environment === "live" 

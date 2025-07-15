@@ -5,6 +5,9 @@ import { Badge } from '../ui/badge';
 import { GameCard } from './GameCard';
 import { Calendar, Trophy, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { useAuth } from '../AuthGuard';
+import { toast } from 'sonner';
 
 interface Team {
   id: number;
@@ -34,6 +37,10 @@ export const GamesList: React.FC = () => {
   const [selectedLeague, setSelectedLeague] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
+  const [betDialog, setBetDialog] = useState<{ game: Game; type: 'home' | 'draw' | 'away' } | null>(null);
+  const [betAmount, setBetAmount] = useState('');
+  const { user, updateWallet, refreshUser } = useAuth();
 
   useEffect(() => {
     fetchGamesAndLeagues();
@@ -73,12 +80,12 @@ export const GamesList: React.FC = () => {
         homeTeam: {
           id: game.home_team.id,
           name: game.home_team.name,
-          logo: game.home_team.logo || '⚽'
+          logo: game.home_team.logo, // Use exactly what admin set
         },
         awayTeam: {
           id: game.away_team.id,
           name: game.away_team.name,
-          logo: game.away_team.logo || '⚽'
+          logo: game.away_team.logo, // Use exactly what admin set
         },
         league: game.league.name,
         kickOffTime: game.kick_off_time,
@@ -115,6 +122,14 @@ export const GamesList: React.FC = () => {
       'medium': { variant: 'secondary' as const, text: '📊 MEDIUM', className: '' }
     };
     return variants[confidence as keyof typeof variants] || variants.medium;
+  };
+
+  // Helper to get 1X2 market and other markets for a game
+  const getMarketsForGame = (gameId: number, markets: any[], marketOptions: any[]) => {
+    const oneXTwoMarket = markets.find(m => m.type === '1x2' || m.name.toLowerCase().includes('1x2'));
+    const oneXTwoOptions = oneXTwoMarket ? marketOptions.filter(opt => opt.market_id === oneXTwoMarket.id) : [];
+    const otherMarkets = markets.filter(m => m !== oneXTwoMarket);
+    return { oneXTwoMarket, oneXTwoOptions, otherMarkets };
   };
 
   return (
@@ -167,13 +182,168 @@ export const GamesList: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {filteredGames.map((game, index) => (
-            <div key={game.id} className="animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
-              <GameCard game={game} />
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm border-separate border-spacing-y-2">
+            <thead>
+              <tr className="bg-muted/50">
+                <th className="px-2 py-2 text-left">Match</th>
+                <th className="px-2 py-2 text-center">1</th>
+                <th className="px-2 py-2 text-center">X</th>
+                <th className="px-2 py-2 text-center">2</th>
+                <th className="px-2 py-2 text-center">More Markets</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGames.map((game) => (
+                <React.Fragment key={game.id}>
+                  <tr className="bg-card hover:bg-muted/20 transition border-b border-border">
+                    <td className="px-2 py-2 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <img src={game.homeTeam.logo} alt="" className="h-5 w-5 rounded-full" />
+                        <span className="font-semibold">{game.homeTeam.name}</span>
+                        <span className="mx-1 text-muted-foreground">vs</span>
+                        <span className="font-semibold">{game.awayTeam.name}</span>
+                        <img src={game.awayTeam.logo} alt="" className="h-5 w-5 rounded-full" />
+                        <span className="ml-2 text-xs text-muted-foreground">{game.kickOffTime}</span>
+                      </div>
+                    </td>
+                    {/* 1X2 odds with bet buttons */}
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
+                        onClick={() => setBetDialog({ game, type: 'home' })}
+                      >
+                        {game.odds.home ? game.odds.home.toFixed(2) : '-'}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
+                        onClick={() => setBetDialog({ game, type: 'draw' })}
+                      >
+                        {game.odds.draw ? game.odds.draw.toFixed(2) : '-'}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
+                        onClick={() => setBetDialog({ game, type: 'away' })}
+                      >
+                        {game.odds.away ? game.odds.away.toFixed(2) : '-'}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <Button size="sm" variant="outline" className="text-xs px-2 py-1" onClick={() => setExpandedGameId(expandedGameId === game.id ? null : game.id)}>
+                        {expandedGameId === game.id ? 'Hide Markets' : '+ More Markets'}
+                      </Button>
+                    </td>
+                  </tr>
+                  {expandedGameId === game.id && (
+                    <tr>
+                      <td colSpan={5} className="bg-muted/10 p-0">
+                        <GameCard game={game} expanded />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      {/* Bet Confirmation Dialog */}
+      {betDialog && (
+        <Dialog open={true} onOpenChange={() => setBetDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Place Bet</DialogTitle>
+            </DialogHeader>
+            <div className="mb-2">
+              <div className="font-semibold mb-1">
+                {betDialog.game.homeTeam.name} vs {betDialog.game.awayTeam.name}
+              </div>
+              <div className="text-sm text-muted-foreground mb-2">
+                Market: 1X2 &nbsp;|&nbsp; Selection: <span className="font-bold text-primary">{betDialog.type === 'home' ? '1' : betDialog.type === 'draw' ? 'X' : '2'}</span>
+                &nbsp;@&nbsp;
+                <span className="font-bold text-primary">
+                  {betDialog.type === 'home' ? betDialog.game.odds.home.toFixed(2) : betDialog.type === 'draw' ? betDialog.game.odds.draw.toFixed(2) : betDialog.game.odds.away.toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="number"
+                min="10"
+                placeholder="Enter stake (KES)"
+                className="w-full border rounded p-2 mb-2"
+                value={betAmount}
+                onChange={e => setBetAmount(e.target.value)}
+              />
+              <div className="text-xs text-muted-foreground mb-2">Minimum stake: KES 10</div>
+              {betAmount && parseFloat(betAmount) >= 10 && (
+                <div className="text-xs text-muted-foreground mb-2">
+                  Potential winnings: <span className="font-bold text-success">
+                    KES {(
+                      parseFloat(betAmount) *
+                      (betDialog.type === 'home' ? betDialog.game.odds.home : betDialog.type === 'draw' ? betDialog.game.odds.draw : betDialog.game.odds.away)
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {user && (
+                <div className="text-xs text-muted-foreground mb-2">
+                  Wallet balance: <span className="font-bold">KES {user.walletBalance.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBetDialog(null)}>Cancel</Button>
+              <Button
+                onClick={async () => {
+                  if (!user) {
+                    toast.error('Please login to place bets');
+                    return;
+                  }
+                  const stake = parseFloat(betAmount);
+                  if (isNaN(stake) || stake < 10) {
+                    toast.error('Minimum stake is KES 10');
+                    return;
+                  }
+                  if (stake > user.walletBalance) {
+                    toast.error('Insufficient wallet balance');
+                    return;
+                  }
+                  // Place bet in database
+                  const odds = betDialog.type === 'home' ? betDialog.game.odds.home : betDialog.type === 'draw' ? betDialog.game.odds.draw : betDialog.game.odds.away;
+                  const potentialWinnings = stake * odds;
+                  const { error } = await supabase
+                    .from('bets')
+                    .insert({
+                      user_id: user.id,
+                      game_id: betDialog.game.id,
+                      stake,
+                      bet_on: betDialog.type === 'home' ? 'home_win' : betDialog.type === 'draw' ? 'draw' : 'away_win',
+                      odds,
+                      potential_winnings: potentialWinnings,
+                      status: 'active',
+                    });
+                  if (error) {
+                    toast.error('Failed to place bet. Please try again.');
+                    return;
+                  }
+                  // Deduct stake from wallet
+                  await updateWallet(-stake);
+                  await refreshUser();
+                  setBetDialog(null);
+                  setBetAmount('');
+                  toast.success(`Bet placed! Potential winnings: KES ${potentialWinnings.toFixed(2)}`);
+                }}
+                disabled={!betAmount || parseFloat(betAmount) < 10}
+              >
+                Place Bet
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {!isLoading && !error && filteredGames.length === 0 && (

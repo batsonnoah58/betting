@@ -11,6 +11,7 @@ import { AuthProvider } from "./components/AuthGuard";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { LoginForm } from "./components/auth/LoginForm";
 import { SignupForm } from "./components/auth/SignupForm";
+import { BetslipProvider } from "./components/betslip/BetslipContext";
 
 const queryClient = new QueryClient();
 
@@ -21,16 +22,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/games" element={<Games />} />
-            <Route path="/bet-history" element={<BetHistory />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/login" element={<LoginForm />} />
-            <Route path="/signup" element={<SignupForm />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <BetslipProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/games" element={<Games />} />
+              <Route path="/bet-history" element={<BetHistory />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/login" element={<LoginForm />} />
+              <Route path="/signup" element={<SignupForm />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BetslipProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
