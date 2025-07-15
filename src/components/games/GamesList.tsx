@@ -6,8 +6,9 @@ import { GameCard } from './GameCard';
 import { Calendar, Trophy, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
-import { useAuth } from '../AuthGuard';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Tabs } from '../ui/tabs';
 
 interface Team {
   id: number;
@@ -31,6 +32,18 @@ interface Game {
   confidence: string;
 }
 
+interface Market {
+  id: number;
+  type: string;
+  name: string;
+}
+
+interface MarketOption {
+  id: number;
+  market_id: number;
+  label: string;
+}
+
 export const GamesList: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [leagues, setLeagues] = useState<string[]>(['all']);
@@ -41,6 +54,9 @@ export const GamesList: React.FC = () => {
   const [betDialog, setBetDialog] = useState<{ game: Game; type: 'home' | 'draw' | 'away' } | null>(null);
   const [betAmount, setBetAmount] = useState('');
   const { user, updateWallet, refreshUser } = useAuth();
+
+  // Add tab state for navigation
+  const [activeTab, setActiveTab] = useState<'highlights' | 'upcoming' | 'countries' | 'quick-e'>('highlights');
 
   useEffect(() => {
     fetchGamesAndLeagues();
@@ -111,9 +127,18 @@ export const GamesList: React.FC = () => {
     }
   };
   
-  const filteredGames = selectedLeague === 'all' 
-    ? games 
-    : games.filter(game => game.league === selectedLeague);
+  // Tab-based filtering logic
+  let filteredGames: Game[] = [];
+  if (activeTab === 'upcoming') {
+    filteredGames = selectedLeague === 'all'
+      ? games
+      : games.filter(game => game.league === selectedLeague);
+  } else if (activeTab === 'highlights') {
+    filteredGames = (selectedLeague === 'all'
+      ? games
+      : games.filter(game => game.league === selectedLeague)
+    ).filter(game => game.confidence === 'very-high' || game.confidence === 'high');
+  } // For 'countries' and 'quick-e', filteredGames remains empty
 
   const getConfidenceBadge = (confidence: string) => {
     const variants = {
@@ -125,7 +150,7 @@ export const GamesList: React.FC = () => {
   };
 
   // Helper to get 1X2 market and other markets for a game
-  const getMarketsForGame = (gameId: number, markets: any[], marketOptions: any[]) => {
+  const getMarketsForGame = (gameId: number, markets: Market[], marketOptions: MarketOption[]) => {
     const oneXTwoMarket = markets.find(m => m.type === '1x2' || m.name.toLowerCase().includes('1x2'));
     const oneXTwoOptions = oneXTwoMarket ? marketOptions.filter(opt => opt.market_id === oneXTwoMarket.id) : [];
     const otherMarkets = markets.filter(m => m !== oneXTwoMarket);
@@ -133,7 +158,30 @@ export const GamesList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="games-list space-y-4 md:space-y-6">
+      {/* Tab Navigation Bar */}
+      <div className="w-full bg-card border-b border-border flex items-center px-2 sm:px-4 py-2 sticky top-[56px] z-40 rounded-t-xl">
+        {[
+          { key: 'highlights', label: 'Highlights' },
+          { key: 'upcoming', label: 'Upcoming' },
+          { key: 'countries', label: 'Countries' },
+          { key: 'quick-e', label: 'Quick-e' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            className={`px-4 py-2 font-semibold text-sm rounded-lg mx-1 transition-colors border focus:outline-none focus:ring-2 focus:ring-accent/60 focus:z-10
+              ${activeTab === tab.key
+                ? 'bg-accent text-accent-foreground border-accent shadow-betting'
+                : 'bg-muted text-muted-foreground border-border hover:bg-muted/70'}`}
+            onClick={() => setActiveTab(tab.key as 'highlights' | 'upcoming' | 'countries' | 'quick-e')}
+            aria-selected={activeTab === tab.key}
+            role="tab"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {/* End Tab Navigation Bar */}
       <Card className="shadow-betting">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2">
@@ -142,28 +190,37 @@ export const GamesList: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
-            <span className="text-sm font-medium">Filter by league:</span>
-            <div className="flex flex-wrap gap-2">
-              {leagues.map((league) => (
-                <Button
-                  key={league}
-                  variant={selectedLeague === league ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedLeague(league)}
-                  className="text-xs h-8"
-                  aria-pressed={selectedLeague === league}
-                  aria-label={`Filter by ${league}`}
-                >
-                  {league === 'all' ? 'All Leagues' : league}
-                </Button>
-              ))}
-            </div>
+          {/* League filter chips */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {['All Leagues', 'La Liga', 'Bundesliga', 'Serie A', 'Premier League'].map(league => (
+              <button
+                key={league}
+                className={`px-4 py-1.5 rounded-full font-medium text-xs border transition-colors
+                  ${(selectedLeague === league || (league === 'All Leagues' && selectedLeague === 'all'))
+                    ? 'bg-accent text-accent-foreground border-accent shadow-betting'
+                    : 'bg-muted text-muted-foreground border-border hover:bg-muted/70'}`}
+                onClick={() => setSelectedLeague(league === 'All Leagues' ? 'all' : league)}
+              >
+                {league}
+              </button>
+            ))}
           </div>
+          {/* End League filter chips */}
         </CardContent>
       </Card>
 
-      {isLoading ? (
+      {activeTab === 'countries' || activeTab === 'quick-e' ? (
+        <Card className="shadow-betting">
+          <CardContent className="p-4 sm:p-6">
+            <div className="text-center py-8">
+              <div className="text-muted-foreground mb-2 text-lg">Coming soon...</div>
+              <p className="text-sm text-muted-foreground">
+                This feature will be available in a future update.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <Card className="shadow-betting">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-center py-8">
@@ -192,73 +249,10 @@ export const GamesList: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm border-separate border-spacing-y-2">
-            <thead>
-              <tr className="bg-muted/50">
-                <th className="px-2 py-2 text-left">Match</th>
-                <th className="px-2 py-2 text-center">1</th>
-                <th className="px-2 py-2 text-center">X</th>
-                <th className="px-2 py-2 text-center">2</th>
-                <th className="px-2 py-2 text-center">More Markets</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredGames.map((game) => (
-                <React.Fragment key={game.id}>
-                  <tr className="bg-card hover:bg-muted/20 transition border-b border-border">
-                    <td className="px-2 py-2 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <img src={game.homeTeam.logo} alt="" className="h-5 w-5 rounded-full" />
-                        <span className="font-semibold">{game.homeTeam.name}</span>
-                        <span className="mx-1 text-muted-foreground">vs</span>
-                        <span className="font-semibold">{game.awayTeam.name}</span>
-                        <img src={game.awayTeam.logo} alt="" className="h-5 w-5 rounded-full" />
-                        <span className="ml-2 text-xs text-muted-foreground">{game.kickOffTime}</span>
-                      </div>
-                    </td>
-                    {/* 1X2 odds with bet buttons */}
-                    <td className="px-2 py-2 text-center">
-                      <button
-                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
-                        onClick={() => setBetDialog({ game, type: 'home' })}
-                      >
-                        {game.odds.home ? game.odds.home.toFixed(2) : '-'}
-                      </button>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <button
-                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
-                        onClick={() => setBetDialog({ game, type: 'draw' })}
-                      >
-                        {game.odds.draw ? game.odds.draw.toFixed(2) : '-'}
-                      </button>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <button
-                        className="inline-block bg-muted px-3 py-1 rounded font-bold hover:bg-primary/10 border border-primary/20 transition"
-                        onClick={() => setBetDialog({ game, type: 'away' })}
-                      >
-                        {game.odds.away ? game.odds.away.toFixed(2) : '-'}
-                      </button>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <Button size="sm" variant="outline" className="text-xs px-2 py-1" onClick={() => setExpandedGameId(expandedGameId === game.id ? null : game.id)}>
-                        {expandedGameId === game.id ? 'Hide Markets' : '+ More Markets'}
-                      </Button>
-                    </td>
-                  </tr>
-                  {expandedGameId === game.id && (
-                    <tr>
-                      <td colSpan={5} className="bg-muted/10 p-0">
-                        <GameCard game={game} expanded />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-4">
+          {filteredGames.map((game) => (
+            <GameCard key={game.id} game={game} />
+          ))}
         </div>
       )}
 
@@ -304,7 +298,7 @@ export const GamesList: React.FC = () => {
                   Wallet balance: <span className="font-bold">KES {user.walletBalance.toFixed(2)}</span>
                 </div>
               )}
-            </div>
+      </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setBetDialog(null)}>Cancel</Button>
               <Button
@@ -366,7 +360,7 @@ export const GamesList: React.FC = () => {
                   ? 'No games available today. Check back later for new matches.'
                   : `No games found for ${selectedLeague}. Try selecting a different league.`
                 }
-              </p>
+            </p>
             </div>
           </CardContent>
         </Card>
