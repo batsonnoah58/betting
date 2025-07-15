@@ -40,9 +40,10 @@ serve(async (req) => {
       throw new Error("Maximum deposit amount is KES 100,000");
     }
 
-    // Get PayPal credentials
+    // Load PayPal credentials from environment variables
+    // For local dev, use a .env file. For production, set as Supabase Edge Function secrets.
     const paypalClientId = Deno.env.get("PAYPAL_CLIENT_ID");
-    const paypalClientSecret = Deno.env.get("PAYPAL_CLIENT_SECRET");
+    const paypalClientSecret = Deno.env.get("PAYPAL_SECRET");
     const environment = Deno.env.get("PAYPAL_ENVIRONMENT") || "sandbox";
     
     if (!paypalClientId || !paypalClientSecret) {
