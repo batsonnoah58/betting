@@ -62,7 +62,7 @@ const tourSteps = [
     target: '.bottom-nav',
     content: 'Use this bottom navigation on mobile to quickly access key sections.',
     placement: 'top' as const,
-  },
+        },
   {
     target: '.bet-history-section',
     content: 'View your past bets and track your betting history here.',
@@ -102,10 +102,10 @@ const App = () => {
 
   return (
     <OnboardingTourContext.Provider value={{ startTour }}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
           <Joyride
             key={tourKey}
             steps={tourSteps}
@@ -116,16 +116,16 @@ const App = () => {
             styles={{ options: { zIndex: 10000 } }}
             callback={handleTourCallback}
           />
-          <BrowserRouter>
-            <AuthProvider>
-              <BetslipProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <BetslipProvider>
                 <BetslipDrawer />
                 <BottomNav onBetslipClick={() => {}} />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/games" element={<Games />} />
-                  <Route path="/live" element={<Live />} />
-                  <Route path="/bet-history" element={<BetHistory />} />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/games" element={<Games />} />
+                <Route path="/live" element={<Live />} />
+                <Route path="/bet-history" element={<BetHistory />} />
                   <Route path="/admin" element={<AdminLayout />}>
                     <Route index element={<AdminDashboard />} />
                     <Route path="users" element={<AdminUsersManager />} />
@@ -134,19 +134,19 @@ const App = () => {
                     <Route path="leagues" element={<AdminLeaguesManager />} />
                     <Route path="settings" element={<AdminSettings />} />
                   </Route>
-                  <Route path="/login" element={<LoginForm />} />
-                  <Route path="/signup" element={<SignupForm />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/wallet" element={<WalletPage />} />
-                  <Route path="/settings" element={<Settings />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BetslipProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/signup" element={<SignupForm />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/wallet" element={<WalletPage />} />
+                <Route path="/settings" element={<Settings />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BetslipProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
     </OnboardingTourContext.Provider>
   );
 };

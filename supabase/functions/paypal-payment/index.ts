@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,18 +10,8 @@ const corsHeaders = {
 // PAYPAL_CLIENT_ID - Your PayPal REST API client ID (live)
 // PAYPAL_CLIENT_SECRET - Your PayPal REST API secret (live)
 // PAYPAL_ENVIRONMENT - Set to 'live' for production, 'sandbox' for testing (default: 'live')
-
-type EnvVars = {
-  SUPABASE_URL?: string;
-  SUPABASE_SERVICE_ROLE_KEY?: string;
-  PAYPAL_CLIENT_ID?: string;
-  PAYPAL_CLIENT_SECRET?: string;
-  PAYPAL_ENVIRONMENT?: string;
-};
-
-function getEnv<K extends keyof EnvVars>(key: K): EnvVars[K] {
-  return (globalThis.env?.[key] ?? undefined) as EnvVars[K];
-}
+// SUPABASE_URL - Your Supabase project URL
+// SUPABASE_SERVICE_ROLE_KEY - Your Supabase service role key
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,8 +20,8 @@ serve(async (req) => {
 
   try {
     const supabaseClient = createClient(
-      getEnv('SUPABASE_URL') ?? "",
-      getEnv('SUPABASE_SERVICE_ROLE_KEY') ?? "",
+      Deno.env.get('SUPABASE_URL') ?? "",
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? "",
       { auth: { persistSession: false } }
     );
 
@@ -58,10 +48,16 @@ serve(async (req) => {
     }
 
     // Load PayPal credentials from environment variables
-    // For local dev, use a .env file. For production, set as Supabase Edge Function secrets.
-    const paypalClientId = getEnv('PAYPAL_CLIENT_ID') ?? "";
-    const paypalClientSecret = getEnv('PAYPAL_CLIENT_SECRET') ?? "";
-    const environment = getEnv('PAYPAL_ENVIRONMENT') ?? "live";
+    const paypalClientId = Deno.env.get('PAYPAL_CLIENT_ID') ?? "";
+    const paypalClientSecret = Deno.env.get('PAYPAL_CLIENT_SECRET') ?? "";
+    const environment = Deno.env.get('PAYPAL_ENVIRONMENT') ?? "live";
+
+    // Log presence of PayPal environment variables for debugging
+    console.log("PayPal ENV:", {
+      PAYPAL_CLIENT_ID: !!paypalClientId,
+      PAYPAL_CLIENT_SECRET: !!paypalClientSecret,
+      PAYPAL_ENVIRONMENT: environment
+    });
     
     if (!paypalClientId || !paypalClientSecret) {
       throw new Error("We are experiencing an issue with PayPal payments and are working to fix it as soon as possible. Please try again later or use another payment method if available.");

@@ -15,7 +15,7 @@ export interface AuthContextType {
   logout: () => void;
   updateWallet: (amount: number) => void;
   refreshUser: () => Promise<void>;
-}
+      }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 

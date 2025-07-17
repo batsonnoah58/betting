@@ -11,7 +11,7 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
-type PaymentMethod = 'mpesa' | 'paypal';
+type PaymentMethod = 'mpesa' | 'paypal' | 'paystack';
 
 export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
   const [amount, setAmount] = useState('');
@@ -68,8 +68,8 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
       let response;
 
       if (paymentMethod === 'mpesa') {
-        // Call M-Pesa deposit function
-        response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-deposit`, {
+        // Call new M-Pesa payment function
+        response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mpesa-payment`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,7 +82,22 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
             userId: user?.id
           }),
         });
-      } else {
+      } else if (paymentMethod === 'paystack') {
+        // Call Paystack payment function
+        response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paystack-payment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            amount: depositAmount,
+            email: user?.email,
+            userId: user?.id
+          }),
+        });
+      } else if (paymentMethod === 'paypal') {
         // Call PayPal payment function
         response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/paypal-payment`, {
           method: 'POST',
@@ -109,6 +124,10 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
         window.open(paymentResult.approval_url, '_blank');
         setStatus('success');
         toast.success("PayPal payment initiated. Please complete the payment in the new window.");
+      } else if (paymentMethod === 'paystack' && paymentResult.authorization_url) {
+        window.open(paymentResult.authorization_url, '_blank');
+        setStatus('success');
+        toast.success("Paystack payment initiated. Please complete the payment in the new window.");
       } else {
         setStatus('success');
         toast.success("STK Push sent to your phone. Please check your M-Pesa and enter the PIN to complete the deposit.");
@@ -160,109 +179,122 @@ export const DepositModal: React.FC<DepositModalProps> = ({ onClose }) => {
             <span>Deposit Funds</span>
           </DialogTitle>
           <DialogDescription>
-            Add money to your wallet using PayPal. Minimum deposit is KES 100.
+            Add money to your wallet using PayPal or M-Pesa. Minimum deposit is KES 100.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="bg-yellow-100 text-yellow-800 p-3 rounded text-sm flex items-center gap-2">
-            <Smartphone className="h-4 w-4" />
-            M-Pesa is temporarily unavailable. Please use PayPal to deposit funds.
-          </div>
-          {status === 'success' ? (
-            <div className="text-center py-6">
-              <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">PayPal Payment Initiated!</h3>
-              <p className="text-sm text-muted-foreground">Please complete the payment in the new window that opened.</p>
-            </div>
-          ) : (
-            <>
-              {/* Payment Method Selection - Only PayPal enabled */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Payment Method</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
-                    disabled
-                  >
-                    <Smartphone className="h-4 w-4" />
-                    <span>M-Pesa</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    className="flex items-center space-x-2"
-                    disabled
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    <span>PayPal</span>
-                  </Button>
-                </div>
-              </div>
-              {/* Amount input */}
+          {/* Payment Method Selection */}
           <div className="space-y-2">
-                <label htmlFor="amount" className="text-sm font-medium">Amount (KES)</label>
+            <label className="text-sm font-medium">Payment Method</label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={paymentMethod === 'mpesa' ? 'default' : 'outline'}
+                className="flex items-center space-x-2"
+                onClick={() => setPaymentMethod('mpesa')}
+                disabled={isProcessing}
+              >
+                <Smartphone className="h-4 w-4" />
+                <span>M-Pesa</span>
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'paypal' ? 'default' : 'outline'}
+                className="flex items-center space-x-2"
+                onClick={() => setPaymentMethod('paypal')}
+                disabled={isProcessing}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>PayPal</span>
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'paystack' ? 'default' : 'outline'}
+                className="flex items-center space-x-2"
+                onClick={() => setPaymentMethod('paystack')}
+                disabled={isProcessing}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>Paystack</span>
+              </Button>
+            </div>
+          </div>
+          {/* Phone number input for M-Pesa and IntaSend */}
+          {(paymentMethod === 'mpesa' || paymentMethod === 'intasend') && (
+            <div className="space-y-2">
+              <label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number</label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="2547XXXXXXXX"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={isProcessing}
+              />
+              <p className="text-xs text-muted-foreground">Enter your registered phone number (format: 2547XXXXXXXX)</p>
+            </div>
+          )}
+          {/* Amount input */}
+          <div className="space-y-2">
+            <label htmlFor="amount" className="text-sm font-medium">Amount (KES)</label>
             <Input
               id="amount"
               type="number"
               placeholder="Enter amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-                  min="100"
-                  max="100000"
-                  className="h-10"
-                  disabled={isProcessing}
-                />
-                <p className="text-xs text-muted-foreground">Minimum: KES 100 | Maximum: KES 100,000</p>
-              </div>
-              {errorMessage && status === 'error' && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2">
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                    <p className="text-sm text-destructive">{errorMessage}</p>
+              min="100"
+              max="100000"
+              className="h-10"
+              disabled={isProcessing}
+            />
+            <p className="text-xs text-muted-foreground">Minimum: KES 100 | Maximum: KES 100,000</p>
           </div>
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={handleClose}
-                  className="flex-1"
-                  disabled={isProcessing}
-                >
+          {errorMessage && status === 'error' && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg mb-2">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <p className="text-sm text-destructive">{errorMessage}</p>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1"
+              disabled={isProcessing}
+            >
               Cancel
             </Button>
             <Button
               onClick={handleDeposit}
-                  disabled={!amount || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
+              disabled={!amount || parseFloat(amount) < 100 || parseFloat(amount) > 100000 || isProcessing}
               className="flex-1"
             >
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    `Deposit ${amount ? formatCurrency(amount) : ''}`
-                  )}
+              {isProcessing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : (
+                `Deposit ${amount ? formatCurrency(amount) : ''}`
+              )}
             </Button>
           </div>
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <div className="flex items-start space-x-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="text-xs text-muted-foreground">
-                    <div className="font-medium mb-1">PayPal Payment:</div>
-                    <ul className="space-y-1 list-disc list-inside">
-                      <li>Enter amount and click "Deposit"</li>
-                      <li>Complete payment in PayPal window</li>
-                      <li>Funds will be added to your wallet instantly</li>
-                    </ul>
-                  </div>
-                </div>
+          <div className="bg-muted/50 p-3 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="text-xs text-muted-foreground">
+                <div className="font-medium mb-1">PayPal Payment:</div>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Enter amount and click "Deposit"</li>
+                  <li>Complete payment in PayPal window</li>
+                  <li>Funds will be added to your wallet instantly</li>
+                </ul>
               </div>
-            </>
-          )}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
