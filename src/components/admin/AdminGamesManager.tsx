@@ -15,6 +15,7 @@ import { Label } from '../ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion';
 import { useToast } from '../ui/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Team { id: number; name: string; logo?: string; }
 interface League { id: number; name: string; }
@@ -50,6 +51,15 @@ interface GameWithRelations extends Game {
   league: League;
 }
 
+interface GameEvent {
+  id: number;
+  game_id: number;
+  minute: number;
+  scorer?: string;
+  type: string;
+  created_at: string;
+}
+
 function isErrorWithMessage(err: unknown): err is { message: string } {
   return typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string';
 }
@@ -79,6 +89,7 @@ export const AdminGamesManager: React.FC = () => {
   const [marketsByGame, setMarketsByGame] = useState<Record<number, Market[]>>({});
   const [marketOptionsByMarket, setMarketOptionsByMarket] = useState<Record<number, MarketOption[]>>({});
   const [marketsLoading, setMarketsLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
 
   // Add Dialog imports for market and option CRUD
   const [showMarketDialog, setShowMarketDialog] = useState(false);
@@ -93,14 +104,19 @@ export const AdminGamesManager: React.FC = () => {
   const [selectedOption, setSelectedOption] = useState<MarketOption | null>(null);
   const [showDeleteOption, setShowDeleteOption] = useState(false);
 
+  // Add state for event dialog
+  const [showEventDialog, setShowEventDialog] = useState(false);
+  const [eventDialogMode, setEventDialogMode] = useState<'add' | 'edit'>('add');
+  const [eventForm, setEventForm] = useState<Partial<GameEvent>>({});
+  const [selectedEvent, setSelectedEvent] = useState<GameEvent | null>(null);
+  const [showDeleteEvent, setShowDeleteEvent] = useState(false);
+  const [eventFormError, setEventFormError] = useState<string | null>(null);
+
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Fetch all data
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
-  const fetchAll = async () => {
+  // Move fetchAll here so it is in scope
+  async function fetchAll() {
     setLoading(true);
     setError(null);
     try {
@@ -115,21 +131,21 @@ export const AdminGamesManager: React.FC = () => {
           home_team_id, away_team_id, league_id
         `)
         .order('kick_off_time', { ascending: true });
-      if (gamesError) throw gamesError;
+      if (gamesError) { console.error('Games fetch error:', gamesError); throw gamesError; }
       setGames(gamesData || []);
 
       // Fetch teams
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name');
-      if (teamsError) throw teamsError;
+      if (teamsError) { console.error('Teams fetch error:', teamsError); throw teamsError; }
       setTeams(teamsData || []);
 
       // Fetch leagues
       const { data: leaguesData, error: leaguesError } = await supabase
         .from('leagues')
         .select('id, name');
-      if (leaguesError) throw leaguesError;
+      if (leaguesError) { console.error('Leagues fetch error:', leaguesError); throw leaguesError; }
       setLeagues(leaguesData || []);
     } catch (err: unknown) {
       if (isErrorWithMessage(err)) {
@@ -137,41 +153,207 @@ export const AdminGamesManager: React.FC = () => {
       } else {
         setError('Failed to fetch data');
       }
+      // Log error for debugging
+      console.error('fetchAll error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchMarketsForGame = async (gameId: number) => {
-    setMarketsLoading(true);
-    try {
-      const { data: markets, error } = await supabase
-        .from('markets')
-        .select('*')
-        .eq('game_id', gameId);
+  // 1. Ensure fetchAll is called on mount
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  // Fetch markets for a game with React Query
+  const useMarkets = (gameId: number) =>
+    useQuery<Market[], Error>({
+      queryKey: ['admin-markets', gameId],
+      queryFn: async () => {
+        const { data, error } = await supabase.from('markets').select('*').eq('game_id', gameId);
+        if (error) throw error;
+        return data || [];
+      },
+      enabled: !!gameId,
+    });
+
+  // At the top level, fetch all events:
+  const { data: allEvents = [], isLoading: eventsLoading } = useQuery<GameEvent[], Error>({
+    queryKey: ['admin-game-events'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('game_events').select('*').order('minute');
       if (error) throw error;
-      setMarketsByGame((prev) => ({ ...prev, [gameId]: markets || [] }));
-      // Fetch options for each market
-      if (markets && markets.length > 0) {
-        const marketIds = markets.map((m) => m.id);
-        const { data: options, error: optionsError } = await supabase
-          .from('market_options')
-          .select('*')
-          .in('market_id', marketIds);
-        if (optionsError) throw optionsError;
-        const grouped: Record<number, MarketOption[]> = {};
-        (options || []).forEach((opt) => {
-          if (!grouped[opt.market_id]) grouped[opt.market_id] = [];
-          grouped[opt.market_id].push(opt);
-        });
-        setMarketOptionsByMarket((prev) => ({ ...prev, ...grouped }));
+      return data || [];
+    },
+  });
+  // Group events by game_id
+  const eventsByGame: Record<number, GameEvent[]> = {};
+  (allEvents as GameEvent[]).forEach(event => {
+    if (!eventsByGame[event.game_id]) eventsByGame[event.game_id] = [];
+    eventsByGame[event.game_id].push(event);
+  });
+
+  // Fetch all market options for the expanded game when expandedGameId changes
+  useEffect(() => {
+    if (expandedGameId && marketsByGame[expandedGameId]) {
+      setOptionsLoading(true);
+      const marketIds = (marketsByGame[expandedGameId] || []).map(m => m.id);
+      if (marketIds.length === 0) {
+        setMarketOptionsByMarket({});
+        setOptionsLoading(false);
+        return;
       }
-    } catch (err) {
-      // Optionally handle error
-    } finally {
-      setMarketsLoading(false);
+      supabase.from('market_options').select('*').in('market_id', marketIds).then(({ data, error }) => {
+        if (!error && data) {
+          const grouped: Record<number, MarketOption[]> = {};
+          data.forEach(opt => {
+            if (!grouped[opt.market_id]) grouped[opt.market_id] = [];
+            grouped[opt.market_id].push(opt);
+          });
+          setMarketOptionsByMarket(grouped);
+        }
+        setOptionsLoading(false);
+      });
     }
-  };
+  }, [expandedGameId, marketsByGame]);
+
+  // Mutations for market CRUD
+  const addMarketMutation = useMutation({
+    mutationFn: async (payload: { game_id: number; name: string; type: string }) => {
+      const { error } = await supabase.from('markets').insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Market added' });
+      queryClient.invalidateQueries({ queryKey: ['admin-markets', variables.game_id] });
+      setShowMarketDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to add market', variant: 'destructive' });
+    },
+  });
+  const editMarketMutation = useMutation({
+    mutationFn: async (payload: { id: number; name: string; type: string; game_id: number }) => {
+      const { id, name, type } = payload;
+      const { error } = await supabase.from('markets').update({ name, type }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Market updated' });
+      queryClient.invalidateQueries({ queryKey: ['admin-markets', variables.game_id] });
+      setShowMarketDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to update market', variant: 'destructive' });
+    },
+  });
+  const deleteMarketMutation = useMutation({
+    mutationFn: async (payload: { id: number; game_id: number }) => {
+      const { id } = payload;
+      const { error } = await supabase.from('markets').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Market deleted' });
+      queryClient.invalidateQueries({ queryKey: ['admin-markets', variables.game_id] });
+      setShowDeleteMarket(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to delete market', variant: 'destructive' });
+    },
+  });
+
+  // Mutations for market option CRUD
+  const addOptionMutation = useMutation({
+    mutationFn: async (payload: { market_id: number; label: string; odds: number }) => {
+      const { error } = await supabase.from('market_options').insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Option added' });
+      queryClient.invalidateQueries({ queryKey: ['admin-market-options', variables.market_id] });
+      setShowOptionDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to add option', variant: 'destructive' });
+    },
+  });
+  const editOptionMutation = useMutation({
+    mutationFn: async (payload: { id: number; market_id: number; label: string; odds: number }) => {
+      const { id, label, odds } = payload;
+      const { error } = await supabase.from('market_options').update({ label, odds }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Option updated' });
+      queryClient.invalidateQueries({ queryKey: ['admin-market-options', variables.market_id] });
+      setShowOptionDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to update option', variant: 'destructive' });
+    },
+  });
+  const deleteOptionMutation = useMutation({
+    mutationFn: async (payload: { id: number; market_id: number }) => {
+      const { id } = payload;
+      const { error } = await supabase.from('market_options').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Option deleted' });
+      queryClient.invalidateQueries({ queryKey: ['admin-market-options', variables.market_id] });
+      setShowDeleteOption(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to delete option', variant: 'destructive' });
+    },
+  });
+
+  // Mutations for event CRUD
+  const addEventMutation = useMutation({
+    mutationFn: async (payload: { game_id: number; minute: number; scorer?: string; type: string }) => {
+      const { error } = await supabase.from('game_events').insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Event added' });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-events', variables.game_id] });
+      setShowEventDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to add event', variant: 'destructive' });
+    },
+  });
+  const editEventMutation = useMutation({
+    mutationFn: async (payload: { id: number; game_id: number; minute: number; scorer?: string; type: string }) => {
+      const { id, ...fields } = payload;
+      const { error } = await supabase.from('game_events').update(fields).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Event updated' });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-events', variables.game_id] });
+      setShowEventDialog(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to update event', variant: 'destructive' });
+    },
+  });
+  const deleteEventMutation = useMutation({
+    mutationFn: async (payload: { id: number; game_id: number }) => {
+      const { id } = payload;
+      const { error } = await supabase.from('game_events').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: 'Event deleted' });
+      queryClient.invalidateQueries({ queryKey: ['admin-game-events', variables.game_id] });
+      setShowDeleteEvent(false);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Error', description: err.message || 'Failed to delete event', variant: 'destructive' });
+    },
+  });
 
   // Handlers for add/edit/delete
   const openAdd = () => {
@@ -297,6 +479,7 @@ export const AdminGamesManager: React.FC = () => {
     setMarketDialogMode('edit');
     setMarketForm({ ...market });
     setSelectedMarket(market);
+    setMarketFormError(null);
     setShowMarketDialog(true);
   };
   const openDeleteMarket = (market: Market) => {
@@ -308,45 +491,37 @@ export const AdminGamesManager: React.FC = () => {
     setMarketForm((prev) => ({ ...prev, [name]: value }));
   };
   const handleMarketSubmit = async () => {
-    if (!marketForm.game_id || !marketForm.name || !marketForm.type) {
-      setFormError('Name and type are required');
+    if (!marketForm.name || !marketForm.type) {
+      setMarketFormError('Name and type are required');
       return;
     }
+    setMarketFormError(null);
     try {
       if (marketDialogMode === 'add') {
-        const { error } = await supabase.from('markets').insert({
-          game_id: marketForm.game_id,
+        await addMarketMutation.mutateAsync({
+          game_id: marketForm.game_id!,
           name: marketForm.name,
           type: marketForm.type,
         });
-        if (error) throw error;
-        toast({ title: 'Market added' });
       } else if (marketDialogMode === 'edit' && selectedMarket) {
-        const { error } = await supabase.from('markets').update({
+        await editMarketMutation.mutateAsync({
+          id: selectedMarket.id,
           name: marketForm.name,
           type: marketForm.type,
-        }).eq('id', selectedMarket.id);
-        if (error) throw error;
-        toast({ title: 'Market updated' });
+          game_id: selectedMarket.game_id,
+        });
       }
-      setShowMarketDialog(false);
-      fetchMarketsForGame(marketForm.game_id as number);
-    } catch (err: unknown) {
-      if (isErrorWithMessage(err)) {
-        setMarketFormError(err.message);
-      } else {
-        setMarketFormError('Failed to add/edit market');
-      }
+      setMarketForm({});
+      setSelectedMarket(null);
+      setMarketFormError(null);
+    } catch (err) {
+      // error handled by mutation
     }
   };
   const handleDeleteMarket = async () => {
     if (!selectedMarket) return;
     try {
-      const { error } = await supabase.from('markets').delete().eq('id', selectedMarket.id);
-      if (error) throw error;
-      toast({ title: 'Market deleted' });
-      setShowDeleteMarket(false);
-      fetchMarketsForGame(selectedMarket.game_id);
+      await deleteMarketMutation.mutateAsync({ id: selectedMarket.id, game_id: selectedMarket.game_id });
     } catch (err: unknown) {
       if (isErrorWithMessage(err)) {
         setMarketFormError(err.message);
@@ -378,44 +553,36 @@ export const AdminGamesManager: React.FC = () => {
   };
   const handleOptionSubmit = async () => {
     if (!optionForm.market_id || !optionForm.label || isNaN(Number(optionForm.odds))) {
-      setFormError('Label and valid odds are required');
+      setOptionFormError('Label and valid odds are required');
       return;
     }
+    setOptionFormError(null);
     try {
       if (optionDialogMode === 'add') {
-        const { error } = await supabase.from('market_options').insert({
+        await addOptionMutation.mutateAsync({
           market_id: optionForm.market_id,
           label: optionForm.label,
           odds: Number(optionForm.odds),
         });
-        if (error) throw error;
-        toast({ title: 'Option added' });
       } else if (optionDialogMode === 'edit' && selectedOption) {
-        const { error } = await supabase.from('market_options').update({
+        await editOptionMutation.mutateAsync({
+          id: selectedOption.id,
+          market_id: selectedOption.market_id,
           label: optionForm.label,
           odds: Number(optionForm.odds),
-        }).eq('id', selectedOption.id);
-        if (error) throw error;
-        toast({ title: 'Option updated' });
+        });
       }
-      setShowOptionDialog(false);
-      if (optionForm.market_id) fetchMarketsForGame(marketForm.game_id as number);
-    } catch (err: unknown) {
-      if (isErrorWithMessage(err)) {
-        setOptionFormError(err.message);
-      } else {
-        setOptionFormError('Failed to add/edit option');
-      }
+      setOptionForm({});
+      setSelectedOption(null);
+      setOptionFormError(null);
+    } catch (err) {
+      // error handled by mutation
     }
   };
   const handleDeleteOption = async () => {
     if (!selectedOption) return;
     try {
-      const { error } = await supabase.from('market_options').delete().eq('id', selectedOption.id);
-      if (error) throw error;
-      toast({ title: 'Option deleted' });
-      setShowDeleteOption(false);
-      if (selectedOption.market_id) fetchMarketsForGame(marketForm.game_id as number);
+      await deleteOptionMutation.mutateAsync({ id: selectedOption.id, market_id: selectedOption.market_id });
     } catch (err: unknown) {
       if (isErrorWithMessage(err)) {
         setOptionFormError(err.message);
@@ -424,6 +591,68 @@ export const AdminGamesManager: React.FC = () => {
       }
     }
   };
+
+  // Handlers for event CRUD
+  const openAddEvent = (gameId: number) => {
+    setEventDialogMode('add');
+    setEventForm({ game_id: gameId, type: 'goal' });
+    setSelectedEvent(null);
+    setEventFormError(null);
+    setShowEventDialog(true);
+  }
+  function openEditEvent(event: GameEvent) {
+    setEventDialogMode('edit');
+    setEventForm({ ...event });
+    setSelectedEvent(event);
+    setEventFormError(null);
+    setShowEventDialog(true);
+  }
+  function openDeleteEvent(event: GameEvent) {
+    setSelectedEvent(event);
+    setShowDeleteEvent(true);
+  }
+  function handleEventFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setEventForm((prev) => ({ ...prev, [name]: value }));
+  }
+  async function handleEventSubmit() {
+    if (!eventForm.game_id || !eventForm.minute || !eventForm.type) {
+      setEventFormError('Minute and type are required');
+      return;
+    }
+    setEventFormError(null);
+    try {
+      if (eventDialogMode === 'add') {
+        await addEventMutation.mutateAsync({
+          game_id: eventForm.game_id,
+          minute: Number(eventForm.minute),
+          scorer: eventForm.scorer,
+          type: eventForm.type,
+        });
+      } else if (eventDialogMode === 'edit' && selectedEvent) {
+        await editEventMutation.mutateAsync({
+          id: selectedEvent.id,
+          game_id: selectedEvent.game_id,
+          minute: Number(eventForm.minute),
+          scorer: eventForm.scorer,
+          type: eventForm.type,
+        });
+      }
+      setEventForm({});
+      setSelectedEvent(null);
+      setEventFormError(null);
+    } catch (err) {
+      // error handled by mutation
+    }
+  }
+  async function handleDeleteEvent() {
+    if (!selectedEvent) return;
+    try {
+      await deleteEventMutation.mutateAsync({ id: selectedEvent.id, game_id: selectedEvent.game_id });
+    } catch (err) {
+      // error handled by mutation
+    }
+  }
 
   return (
     <div>
@@ -461,7 +690,7 @@ export const AdminGamesManager: React.FC = () => {
                 </TableRow>
               ) : (
                 games.map((game) => (
-                  <div key={game.id}>
+                  <React.Fragment key={game.id}>
                     <TableRow>
                       <TableCell>{game.id}</TableCell>
                       <TableCell>{game.home_team.logo ? <img src={game.home_team.logo} alt={game.home_team.name} className="inline-block h-6 w-6 object-contain mr-2" /> : '⚽'} {game.home_team.name}</TableCell>
@@ -475,7 +704,11 @@ export const AdminGamesManager: React.FC = () => {
                         <Button size="sm" variant="destructive" onClick={() => openDelete(game)} className="ml-2">Delete</Button>
                         <Button size="sm" variant="secondary" className="ml-2" onClick={() => {
                           setExpandedGameId(expandedGameId === game.id ? null : game.id);
-                          if (expandedGameId !== game.id) fetchMarketsForGame(game.id);
+                          if (expandedGameId !== game.id) {
+                            // Invalidate markets and options for the expanded game
+                            queryClient.invalidateQueries({ queryKey: ['admin-markets', game.id] });
+                            queryClient.invalidateQueries({ queryKey: ['admin-market-options', game.id] });
+                          }
                         }}>
                           {expandedGameId === game.id ? 'Hide Markets' : 'Manage Markets'}
                         </Button>
@@ -483,11 +716,12 @@ export const AdminGamesManager: React.FC = () => {
                     </TableRow>
                     {expandedGameId === game.id && (
                       <TableRow>
-                        <TableCell colSpan={10} className="bg-muted p-0">
+                        <TableCell colSpan={8} className="bg-muted p-0">
                           <Accordion type="single" collapsible defaultValue={undefined}>
                             <AccordionItem value={`markets-${game.id}`}>
                               <AccordionTrigger>Markets for this Game</AccordionTrigger>
                               <AccordionContent>
+                                <Button size="sm" variant="outline" onClick={() => openAddMarket(game.id)} className="mb-2">Add Market</Button>
                                 {marketsLoading ? (
                                   <div className="py-4 text-center">Loading markets...</div>
                                 ) : (
@@ -495,19 +729,21 @@ export const AdminGamesManager: React.FC = () => {
                                     {(marketsByGame[game.id] || []).length === 0 ? (
                                       <div className="py-2">No markets for this game yet.</div>
                                     ) : (
-                                      <div>
-                                        <Button size="sm" variant="outline" onClick={() => openAddMarket(game.id)} className="mb-2">Add Market</Button>
-                                        <ul>
-                                          {(marketsByGame[game.id] || []).map((market) => (
-                                            <li key={market.id} className="mb-2">
-                                              <div className="flex items-center gap-2 font-semibold">
-                                                {market.name} <span className="text-xs text-muted-foreground">({market.type})</span>
-                                                <Button size="sm" variant="outline" onClick={() => openEditMarket(market)}>Edit</Button>
-                                                <Button size="sm" variant="destructive" onClick={() => openDeleteMarket(market)}>Delete</Button>
-                                                <Button size="sm" variant="secondary" onClick={() => openAddOption(market.id)}>Add Option</Button>
-                                              </div>
-                                              <div className="ml-4">
-                                                <div className="font-medium">Options:</div>
+                                      <ul>
+                                        {(marketsByGame[game.id] || []).map((market) => (
+                                          <li key={market.id} className="mb-2">
+                                            <div className="flex items-center gap-2 font-semibold">
+                                              {market.name} <span className="text-xs text-muted-foreground">({market.type})</span>
+                                              <Button size="sm" variant="outline" onClick={() => openEditMarket(market)}>Edit Market</Button>
+                                              <Button size="sm" variant="destructive" onClick={() => openDeleteMarket(market)}>Delete</Button>
+                                              <Button size="sm" variant="secondary" onClick={() => openAddOption(market.id)}>Add Option</Button>
+                                            </div>
+                                            <div className="ml-4">
+                                              <div className="font-medium">Options:</div>
+                                              {optionFormError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{optionFormError}</div>}
+                                              {optionsLoading ? (
+                                                <div className="py-4 text-center">Loading options...</div>
+                                              ) : (
                                                 <ul>
                                                   {(marketOptionsByMarket[market.id] || []).map((opt) => (
                                                     <li key={opt.id} className="flex items-center gap-2">
@@ -518,12 +754,34 @@ export const AdminGamesManager: React.FC = () => {
                                                     </li>
                                                   ))}
                                                 </ul>
-                                              </div>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
+                                              )}
+                                            </div>
+                                          </li>
+                                        ))}
+                                      </ul>
                                     )}
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                            <AccordionItem value={`events-${game.id}`}>
+                              <AccordionTrigger>Goal Events for this Game</AccordionTrigger>
+                              <AccordionContent>
+                                {eventsLoading ? (
+                                  <div className="py-4 text-center">Loading events...</div>
+                                ) : (
+                                  <div>
+                                    <Button size="sm" variant="outline" onClick={() => openAddEvent(game.id)} className="mb-2">Add Event</Button>
+                                    <ul>
+                                      {(eventsByGame[game.id] || []).map(event => (
+                                        <li key={event.id} className="flex items-center gap-2">
+                                          <span>{event.minute}'</span>
+                                          <span>{event.scorer || 'Goal'}</span>
+                                          <Button size="sm" variant="outline" onClick={() => openEditEvent(event)}>Edit</Button>
+                                          <Button size="sm" variant="destructive" onClick={() => openDeleteEvent(event)}>Delete</Button>
+                                        </li>
+                                      ))}
+                                    </ul>
                                   </div>
                                 )}
                               </AccordionContent>
@@ -532,7 +790,7 @@ export const AdminGamesManager: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     )}
-                  </div>
+                  </React.Fragment>
                 ))
               )}
             </TableBody>
@@ -541,7 +799,8 @@ export const AdminGamesManager: React.FC = () => {
       )}
 
       {/* Add Game Dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      {/* 3. Fix add game dialog open/close logic and form state */}
+      <Dialog open={showAdd} onOpenChange={(open) => { setShowAdd(open); if (!open) { setForm({}); setFormError(null); } }}>
         <DialogContent className="w-full max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Game</DialogTitle>
@@ -666,6 +925,7 @@ export const AdminGamesManager: React.FC = () => {
               <select name="status" value={form.status || 'upcoming'} onChange={handleFormChange} className="w-full border rounded p-2" disabled={formLoading}>
                 <option value="upcoming">Upcoming</option>
                 <option value="live">Live</option>
+                <option value="halftime">Halftime</option>
                 <option value="finished">Finished</option>
               </select>
             </div>
@@ -700,20 +960,23 @@ export const AdminGamesManager: React.FC = () => {
       </Dialog>
 
       {/* Add Dialogs for market and option add/edit/delete */}
-      <Dialog open={showMarketDialog} onOpenChange={setShowMarketDialog}>
+      <Dialog open={showMarketDialog} onOpenChange={(open) => { setShowMarketDialog(open); if (!open) { setMarketForm({}); setSelectedMarket(null); setMarketFormError(null); } }}>
         <DialogContent className="w-full max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{marketDialogMode === 'add' ? 'Add Market' : 'Edit Market'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Name</Label>
-            <Input name="name" value={marketForm.name || ''} onChange={handleMarketFormChange} disabled={formLoading} />
+            <Input name="name" value={marketForm.name || ''} onChange={handleMarketFormChange} disabled={addMarketMutation.isPending || editMarketMutation.isPending} />
             <Label>Type</Label>
-            <Input name="type" value={marketForm.type || ''} onChange={handleMarketFormChange} disabled={formLoading} />
+            <Input name="type" value={marketForm.type || ''} onChange={handleMarketFormChange} disabled={addMarketMutation.isPending || editMarketMutation.isPending} />
           </div>
+          {marketFormError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{marketFormError}</div>}
           <DialogFooter>
-            <Button onClick={handleMarketSubmit} disabled={formLoading}>{marketDialogMode === 'add' ? 'Add' : 'Update'}</Button>
-            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
+            <form onSubmit={e => { e.preventDefault(); handleMarketSubmit(); }}>
+              <Button type="submit" disabled={addMarketMutation.isPending || editMarketMutation.isPending}>{marketDialogMode === 'add' ? 'Add' : 'Update'}</Button>
+              <DialogClose asChild><Button variant="secondary" disabled={addMarketMutation.isPending || editMarketMutation.isPending}>Cancel</Button></DialogClose>
+            </form>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -729,20 +992,23 @@ export const AdminGamesManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={showOptionDialog} onOpenChange={setShowOptionDialog}>
+      <Dialog open={showOptionDialog} onOpenChange={(open) => { setShowOptionDialog(open); if (!open) { setOptionForm({}); setSelectedOption(null); setOptionFormError(null); } }}>
         <DialogContent className="w-full max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{optionDialogMode === 'add' ? 'Add Option' : 'Edit Option'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <Label>Label</Label>
-            <Input name="label" value={optionForm.label || ''} onChange={handleOptionFormChange} disabled={formLoading} />
+            <Input name="label" value={optionForm.label || ''} onChange={handleOptionFormChange} disabled={addOptionMutation.isPending || editOptionMutation.isPending} />
             <Label>Odds</Label>
-            <Input name="odds" type="number" value={optionForm.odds || ''} onChange={handleOptionFormChange} disabled={formLoading} />
+            <Input name="odds" type="number" value={optionForm.odds || ''} onChange={handleOptionFormChange} disabled={addOptionMutation.isPending || editOptionMutation.isPending} />
           </div>
+          {optionFormError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{optionFormError}</div>}
           <DialogFooter>
-            <Button onClick={handleOptionSubmit} disabled={formLoading}>{optionDialogMode === 'add' ? 'Add' : 'Update'}</Button>
-            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
+            <form onSubmit={e => { e.preventDefault(); handleOptionSubmit(); }}>
+              <Button type="submit" disabled={addOptionMutation.isPending || editOptionMutation.isPending}>{optionDialogMode === 'add' ? 'Add' : 'Update'}</Button>
+              <DialogClose asChild><Button variant="secondary" disabled={addOptionMutation.isPending || editOptionMutation.isPending}>Cancel</Button></DialogClose>
+            </form>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -758,6 +1024,51 @@ export const AdminGamesManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Dialogs for event add/edit/delete */}
+      <Dialog open={showEventDialog} onOpenChange={(open) => { setShowEventDialog(open); if (!open) { setEventForm({}); setSelectedEvent(null); setEventFormError(null); } }}>
+        <DialogContent className="w-full max-w-sm sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{eventDialogMode === 'add' ? 'Add Event' : 'Edit Event'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Minute</Label>
+            <Input name="minute" type="number" value={eventForm.minute || ''} onChange={handleEventFormChange} disabled={addEventMutation.isPending || editEventMutation.isPending} />
+            <Label>Scorer (optional)</Label>
+            <Input name="scorer" value={eventForm.scorer || ''} onChange={handleEventFormChange} disabled={addEventMutation.isPending || editEventMutation.isPending} />
+            <Label>Type</Label>
+            <select name="type" value={eventForm.type || ''} onChange={handleEventFormChange} disabled={addEventMutation.isPending || editEventMutation.isPending}>
+              <option value="goal">Goal</option>
+              <option value="yellow_card">Yellow Card</option>
+              <option value="red_card">Red Card</option>
+              <option value="substitution">Substitution</option>
+              <option value="penalty">Penalty</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          {eventFormError && <div className="p-2 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm mb-2">{eventFormError}</div>}
+          <DialogFooter>
+            <form onSubmit={e => { e.preventDefault(); handleEventSubmit(); }}>
+              <Button type="submit" disabled={addEventMutation.isPending || editEventMutation.isPending}>{eventDialogMode === 'add' ? 'Add' : 'Update'}</Button>
+              <DialogClose asChild><Button variant="secondary" disabled={addEventMutation.isPending || editEventMutation.isPending}>Cancel</Button></DialogClose>
+            </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showDeleteEvent} onOpenChange={setShowDeleteEvent}>
+        <DialogContent className="w-full max-w-sm sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Delete Event</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this event?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="destructive" onClick={handleDeleteEvent} disabled={formLoading}>Delete</Button>
+            <DialogClose asChild><Button variant="secondary" disabled={formLoading}>Cancel</Button></DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}; 
+};
+
+export default AdminGamesManager; 
